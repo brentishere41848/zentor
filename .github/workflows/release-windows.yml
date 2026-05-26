@@ -65,8 +65,6 @@ jobs:
         shell: pwsh
         run: |
           $scriptArgs = @(
-            "-ExecutionPolicy", "Bypass",
-            "-File", "installer\windows\build-msi.ps1",
             "-Version", "${{ steps.version.outputs.version }}",
             "-RequireLocalCore"
           )
@@ -80,7 +78,7 @@ jobs:
               $scriptArgs += "-AllowDevelopmentModel"
             }
           }
-          powershell @scriptArgs
+          & .\installer\windows\build-msi.ps1 @scriptArgs
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
