@@ -15,6 +15,13 @@ function Require-Command([string]$Name, [string]$Hint) {
   }
 }
 
+function Invoke-Checked([scriptblock]$Command, [string]$FailureMessage) {
+  & $Command
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FailureMessage Exit code: $LASTEXITCODE"
+  }
+}
+
 function Copy-Tree([string]$Source, [string]$Destination) {
   if (Test-Path $Destination) {
     Remove-Item -LiteralPath $Destination -Recurse -Force
@@ -131,7 +138,12 @@ if (-not $SkipFlutterBuild) {
   if (Test-Path "C:\Users\Brent\develop\flutter\bin\flutter.bat") {
     $flutter = "C:\Users\Brent\develop\flutter\bin\flutter.bat"
   }
-  & $flutter build windows --release
+  Push-Location $clientDir
+  try {
+    Invoke-Checked { & $flutter build windows --release } "Flutter Windows release build failed."
+  } finally {
+    Pop-Location
+  }
 }
 
 if (-not (Test-Path (Join-Path $releaseDir "Pasus.exe"))) {
@@ -147,7 +159,7 @@ if (-not (Test-Path $localCoreExe) -and -not (Test-Path $localCoreExeDefault) -a
   if ($cargo) {
     Push-Location (Join-Path $root "core\pasus_local_core")
     try {
-      cargo build --release
+      Invoke-Checked { cargo build --release } "pasus_local_core release build failed."
     } finally {
       Pop-Location
     }
@@ -163,7 +175,7 @@ if (-not (Test-Path $guardServiceExeDefault)) {
   if ($cargo) {
     Push-Location (Join-Path $root "core\pasus_guard_service")
     try {
-      cargo build --release
+      Invoke-Checked { cargo build --release } "pasus_guard_service release build failed."
     } finally {
       Pop-Location
     }
@@ -327,7 +339,10 @@ $componentRefsXml
 Set-Content -LiteralPath $wxsPath -Value $wxs -Encoding UTF8
 
 dotnet tool restore
-dotnet wix build $wxsPath -arch x64 -o $msiPath
+if ($LASTEXITCODE -ne 0) {
+  throw "WiX tool restore failed. Exit code: $LASTEXITCODE"
+}
+Invoke-Checked { dotnet wix build $wxsPath -arch x64 -o $msiPath } "MSI build failed."
 
 if (-not (Test-Path $msiPath)) {
   throw "MSI build did not produce the expected package: $msiPath"
@@ -356,7 +371,10 @@ $bundleWxs = @"
 
 Set-Content -LiteralPath $bundleWxsPath -Value $bundleWxs -Encoding UTF8
 dotnet wix extension add WixToolset.BootstrapperApplications.wixext/6.0.2
-dotnet wix build $bundleWxsPath -arch x64 -ext WixToolset.BootstrapperApplications.wixext -o $exeInstallerPath
+if ($LASTEXITCODE -ne 0) {
+  throw "WiX bootstrapper extension restore failed. Exit code: $LASTEXITCODE"
+}
+Invoke-Checked { dotnet wix build $bundleWxsPath -arch x64 -ext WixToolset.BootstrapperApplications.wixext -o $exeInstallerPath } "EXE installer build failed."
 
 Write-Host "Created MSI: $msiPath"
 Write-Host "Created EXE installer: $exeInstallerPath"
