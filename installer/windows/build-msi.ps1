@@ -113,7 +113,9 @@ $guardServiceExeDefault = Join-Path $root "core\pasus_guard_service\target\relea
 $distRoot = Join-Path $root "dist"
 $stageDir = Join-Path $distRoot "windows-msi\stage"
 $wxsPath = Join-Path $distRoot "windows-msi\Pasus.wxs"
+$bundleWxsPath = Join-Path $distRoot "windows-msi\Pasus.Bundle.wxs"
 $msiPath = Join-Path $distRoot "Pasus-$Version-x64.msi"
+$exeInstallerPath = Join-Path $distRoot "Pasus-$Version-x64-setup.exe"
 $clamAvVersion = "1.5.2"
 $clamAvUrl = "https://www.clamav.net/downloads/production/clamav-$clamAvVersion.win.x64.zip"
 $clamAvZipPath = Join-Path $PSScriptRoot "cache\clamav-$clamAvVersion.win.x64.zip"
@@ -327,4 +329,34 @@ Set-Content -LiteralPath $wxsPath -Value $wxs -Encoding UTF8
 dotnet tool restore
 dotnet wix build $wxsPath -arch x64 -o $msiPath
 
+if (-not (Test-Path $msiPath)) {
+  throw "MSI build did not produce the expected package: $msiPath"
+}
+
+$bundleUpgradeCode = "9D6FE1FD-B9F4-4C80-9D03-CF7F453D00B9"
+$bundleWxs = @"
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+  <Bundle
+    Name="Pasus"
+    Manufacturer="Pasus"
+    Version="$Version"
+    UpgradeCode="$bundleUpgradeCode">
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication
+        Theme="hyperlinkLicense"
+        LicenseUrl="https://github.com/brentishere41848/pasus_anti-virus/blob/main/docs/privacy.md" />
+    </BootstrapperApplication>
+    <Chain>
+      <MsiPackage SourceFile="$(XmlEscape $msiPath)" Compressed="yes" />
+    </Chain>
+  </Bundle>
+</Wix>
+"@
+
+Set-Content -LiteralPath $bundleWxsPath -Value $bundleWxs -Encoding UTF8
+dotnet wix extension add WixToolset.BootstrapperApplications.wixext/6.0.2
+dotnet wix build $bundleWxsPath -arch x64 -ext WixToolset.BootstrapperApplications.wixext -o $exeInstallerPath
+
 Write-Host "Created MSI: $msiPath"
+Write-Host "Created EXE installer: $exeInstallerPath"

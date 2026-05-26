@@ -179,24 +179,27 @@ flutter build linux
 
 Platform builds require the normal Flutter toolchain for that platform. iOS and macOS require Xcode on macOS.
 
-## Windows MSI Installer
+## Windows Installers
 
 ```powershell
 cd C:\Users\Brent\CodexProjects\Pasus
 powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.1.0 -RequireLocalCore
 ```
 
-The MSI is written to:
+The installers are written to:
 
 ```text
 dist\Pasus-0.1.0-x64.msi
+dist\Pasus-0.1.0-x64-setup.exe
 ```
 
 The installer stages the Flutter Windows release app, `pasus_local_core.exe`, `pasus_guard_service.exe`, model assets, app assets, bundled Flutter/plugin DLLs, Visual C++ runtime DLLs available on the build machine, local privacy/security docs, and the official Windows ClamAV runtime. Pasus installs ClamAV beside the app in `C:\Program Files\Pasus\ClamAV`; it does not install a hidden service or add stealth persistence. Use `-SkipClamAV` only for development builds where ClamAV is supplied separately.
 
-The MSI build fails if model assets are missing. It also fails when metadata says `production_ready=false` unless you pass `-AllowDevelopmentModel` for an explicitly non-production build.
+The MSI and EXE installer builds fail if model assets are missing. They also fail when metadata says `production_ready=false` unless you pass `-AllowDevelopmentModel` for an explicitly non-production build. The EXE installer is a WiX Burn bootstrapper that contains and runs the MSI.
 
 The bundled runtime includes `freshclam.exe`, but signature database updates remain explicit. Pasus must report scan errors honestly if a local ClamAV database is unavailable instead of pretending files are clean.
+
+GitHub Releases are built by `.github/workflows/release-windows.yml`. Push a version tag such as `v0.1.0` and GitHub Actions will build and attach both the `.msi` and `.exe` installers to the release.
 
 ## Test
 

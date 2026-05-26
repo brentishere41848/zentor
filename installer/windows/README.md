@@ -1,6 +1,6 @@
-# Pasus Windows MSI
+# Pasus Windows Installers
 
-Build the Windows installer from the repository root:
+Build the Windows MSI and EXE installers from the repository root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.1.0
@@ -19,6 +19,7 @@ The script:
 - Includes local privacy/security docs.
 - Uses the local WiX .NET tool from `dotnet-tools.json`.
 - Produces `dist\Pasus-<version>-x64.msi`.
+- Produces `dist\Pasus-<version>-x64-setup.exe`.
 
 Use `-RequireLocalCore` to fail the build if `pasus_local_core.exe` cannot be included:
 
@@ -36,6 +37,8 @@ powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Versio
 The MSI places ClamAV in `C:\Program Files\Pasus\ClamAV` and the Pasus local core discovers `clamscan.exe` there automatically. Pasus does not install ClamAV as a hidden service and does not silently enable persistence.
 
 The bundled runtime includes `freshclam.exe`, but signature database updates are still explicit. If no local ClamAV database is available, Pasus must report the scan error honestly instead of pretending files are clean.
+
+The EXE installer is a WiX Burn bootstrapper that contains the MSI. It is useful for GitHub Releases and users who expect a single setup executable. It installs the same files and follows the same privacy and visibility rules as the MSI.
 
 The MSI build requires AI model assets. If model metadata is `production_ready=false`, pass `-AllowDevelopmentModel` for a non-production installer:
 

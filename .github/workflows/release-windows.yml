@@ -1,0 +1,111 @@
+name: Windows Release Installers
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v prefix"
+        required: true
+        default: "0.1.0"
+      allow_development_model:
+        description: "Allow installer build when AI model metadata has production_ready=false"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-installers:
+    name: Build MSI and EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore Flutter dependencies
+        working-directory: apps/pasus_client
+        run: flutter pub get
+
+      - name: Restore WiX tool
+        run: dotnet tool restore
+
+      - name: Build Windows installers
+        shell: pwsh
+        run: |
+          $scriptArgs = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", "installer\windows\build-msi.ps1",
+            "-Version", "${{ steps.version.outputs.version }}",
+            "-RequireLocalCore"
+          )
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            if ("${{ inputs.allow_development_model }}" -eq "true") {
+              $scriptArgs += "-AllowDevelopmentModel"
+            }
+          } else {
+            $metadata = Get-Content -Raw -LiteralPath "assets\models\pasus_static_malware_model.metadata.json" | ConvertFrom-Json
+            if (-not $metadata.production_ready) {
+              $scriptArgs += "-AllowDevelopmentModel"
+            }
+          }
+          powershell @scriptArgs
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pasus-windows-installers-${{ steps.version.outputs.version }}
+          path: |
+            dist/Pasus-${{ steps.version.outputs.version }}-x64.msi
+            dist/Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Pasus ${{ steps.version.outputs.version }}
+          prerelease: true
+          fail_on_unmatched_files: true
+          body: |
+            Windows installer release for Pasus.
+
+            Assets:
+            - Pasus-${{ steps.version.outputs.version }}-x64.msi
+            - Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
+
+            The current bundled AI model may be marked as a development model in its metadata. Pasus must not claim production AI protection unless `production_ready=true`.
+          files: |
+            dist/Pasus-${{ steps.version.outputs.version }}-x64.msi
+            dist/Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
