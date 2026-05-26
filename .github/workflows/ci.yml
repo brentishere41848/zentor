@@ -1,0 +1,63 @@
+name: Pasus CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    name: Rust local core and guard
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test local core
+        working-directory: core/pasus_local_core
+        run: cargo test
+
+      - name: Test guard service
+        working-directory: core/pasus_guard_service
+        run: cargo test
+
+      - name: Test backend API
+        working-directory: services/api
+        run: cargo test
+
+  flutter:
+    name: Flutter client and protocol
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.0
+
+      - name: Protocol dependencies
+        working-directory: packages/pasus_protocol
+        run: dart pub get
+
+      - name: Protocol tests
+        working-directory: packages/pasus_protocol
+        run: dart test
+
+      - name: Flutter dependencies
+        working-directory: apps/pasus_client
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: apps/pasus_client
+        run: flutter analyze
+
+      - name: Flutter tests
+        working-directory: apps/pasus_client
+        run: flutter test

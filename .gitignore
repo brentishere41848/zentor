@@ -1,0 +1,50 @@
+# Rust
+/target/
+**/target/
+Cargo.lock
+!core/**/Cargo.lock
+!services/**/Cargo.lock
+
+# Node
+**/node_modules/
+**/.next/
+**/dist/
+/dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+.pasus-dashboard-port
+
+# Flutter/Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/
+**/coverage/
+**/flutter/ephemeral/
+**/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/android/local.properties
+
+# Installer/build caches
+installer/windows/cache/
+dist/
+*.msi
+*.exe
+*.pdb
+*.rlib
+*.lib

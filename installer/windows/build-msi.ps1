@@ -1,0 +1,330 @@
+param(
+  [string]$Version = "0.1.0",
+  [string]$Configuration = "Release",
+  [switch]$SkipFlutterBuild,
+  [switch]$RequireLocalCore,
+  [switch]$SkipClamAV,
+  [switch]$AllowDevelopmentModel
+)
+
+$ErrorActionPreference = "Stop"
+
+function Require-Command([string]$Name, [string]$Hint) {
+  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    throw "$Name was not found. $Hint"
+  }
+}
+
+function Copy-Tree([string]$Source, [string]$Destination) {
+  if (Test-Path $Destination) {
+    Remove-Item -LiteralPath $Destination -Recurse -Force
+  }
+  New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+  Copy-Item -Path (Join-Path $Source "*") -Destination $Destination -Recurse -Force
+}
+
+function Ensure-ClamAVPackage([string]$ZipPath, [string]$Url) {
+  if (Test-Path $ZipPath) {
+    return
+  }
+
+  New-Item -ItemType Directory -Force -Path (Split-Path $ZipPath) | Out-Null
+  Write-Host "Downloading ClamAV runtime: $Url"
+  Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+}
+
+function Copy-ClamAVRuntime([string]$ZipPath, [string]$ExtractDir, [string]$Destination) {
+  if (Test-Path $ExtractDir) {
+    Remove-Item -LiteralPath $ExtractDir -Recurse -Force
+  }
+  if (Test-Path $Destination) {
+    Remove-Item -LiteralPath $Destination -Recurse -Force
+  }
+
+  New-Item -ItemType Directory -Force -Path $ExtractDir | Out-Null
+  New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+  Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractDir -Force
+
+  $sourceRoot = $ExtractDir
+  $candidateRoots = Get-ChildItem -LiteralPath $ExtractDir -Directory
+  foreach ($candidateRoot in $candidateRoots) {
+    if (Test-Path (Join-Path $candidateRoot.FullName "clamscan.exe")) {
+      $sourceRoot = $candidateRoot.FullName
+      break
+    }
+  }
+
+  $runtimeExtensions = @(".exe", ".dll", ".txt", ".md")
+  Get-ChildItem -LiteralPath $sourceRoot -File |
+    Where-Object { $runtimeExtensions -contains $_.Extension.ToLowerInvariant() } |
+    ForEach-Object {
+      Copy-Item -LiteralPath $_.FullName -Destination $Destination -Force
+    }
+
+  foreach ($directoryName in @("certs", "conf_examples", "COPYING")) {
+    $sourceDirectory = Join-Path $sourceRoot $directoryName
+    if (Test-Path $sourceDirectory) {
+      Copy-Tree $sourceDirectory (Join-Path $Destination $directoryName)
+    }
+  }
+
+  if (-not (Test-Path (Join-Path $Destination "clamscan.exe"))) {
+    throw "ClamAV runtime was expanded, but clamscan.exe was not found."
+  }
+}
+
+function To-WixId([string]$Value) {
+  $id = [regex]::Replace($Value, "[^A-Za-z0-9_]", "_")
+  if ($id -match "^[0-9]") {
+    $id = "I_$id"
+  }
+  if ($id.Length -gt 60) {
+    $hash = [System.BitConverter]::ToString(
+      [System.Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Value))
+    ).Replace("-", "").Substring(0, 10)
+    $id = $id.Substring(0, 45) + "_" + $hash
+  }
+  return $id
+}
+
+function XmlEscape([string]$Value) {
+  return [System.Security.SecurityElement]::Escape($Value)
+}
+
+function Get-RelativePath([string]$Base, [string]$Path) {
+  $baseFull = [IO.Path]::GetFullPath($Base).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+  $pathFull = [IO.Path]::GetFullPath($Path)
+  if ($pathFull.TrimEnd('\', '/').Equals($baseFull.TrimEnd('\', '/'), [StringComparison]::OrdinalIgnoreCase)) {
+    return "."
+  }
+  if ($pathFull.StartsWith($baseFull, [StringComparison]::OrdinalIgnoreCase)) {
+    return $pathFull.Substring($baseFull.Length)
+  }
+  return $pathFull
+}
+
+$root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$clientDir = Join-Path $root "apps\pasus_client"
+$releaseDir = Join-Path $clientDir "build\windows\x64\runner\$Configuration"
+$localCoreExe = Join-Path $root "core\pasus_local_core\target\x86_64-pc-windows-msvc\release\pasus_local_core.exe"
+$localCoreExeGnu = Join-Path $root "core\pasus_local_core\target\x86_64-pc-windows-gnu\release\pasus_local_core.exe"
+$localCoreExeDefault = Join-Path $root "core\pasus_local_core\target\release\pasus_local_core.exe"
+$guardServiceExeDefault = Join-Path $root "core\pasus_guard_service\target\release\pasus_guard_service.exe"
+$distRoot = Join-Path $root "dist"
+$stageDir = Join-Path $distRoot "windows-msi\stage"
+$wxsPath = Join-Path $distRoot "windows-msi\Pasus.wxs"
+$msiPath = Join-Path $distRoot "Pasus-$Version-x64.msi"
+$clamAvVersion = "1.5.2"
+$clamAvUrl = "https://www.clamav.net/downloads/production/clamav-$clamAvVersion.win.x64.zip"
+$clamAvZipPath = Join-Path $PSScriptRoot "cache\clamav-$clamAvVersion.win.x64.zip"
+$clamAvExtractDir = Join-Path $distRoot "windows-msi\clamav-extract"
+$modelSourceDir = Join-Path $root "assets\models"
+$modelFile = Join-Path $modelSourceDir "pasus_static_malware_model.onnx"
+$modelMetadataFile = Join-Path $modelSourceDir "pasus_static_malware_model.metadata.json"
+
+Require-Command "dotnet" "Install the .NET SDK."
+
+if (-not $SkipFlutterBuild) {
+  $flutter = "flutter"
+  if (Test-Path "C:\Users\Brent\develop\flutter\bin\flutter.bat") {
+    $flutter = "C:\Users\Brent\develop\flutter\bin\flutter.bat"
+  }
+  & $flutter build windows --release
+}
+
+if (-not (Test-Path (Join-Path $releaseDir "Pasus.exe"))) {
+  throw "Flutter release output was not found at $releaseDir"
+}
+
+if (-not (Test-Path $localCoreExe) -and -not (Test-Path $localCoreExeDefault) -and -not (Test-Path $localCoreExeGnu)) {
+  $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
+  if (-not $cargo -and (Test-Path "$env:USERPROFILE\.cargo\bin\cargo.exe")) {
+    $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+    $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
+  }
+  if ($cargo) {
+    Push-Location (Join-Path $root "core\pasus_local_core")
+    try {
+      cargo build --release
+    } finally {
+      Pop-Location
+    }
+  }
+}
+
+if (-not (Test-Path $guardServiceExeDefault)) {
+  $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
+  if (-not $cargo -and (Test-Path "$env:USERPROFILE\.cargo\bin\cargo.exe")) {
+    $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+    $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
+  }
+  if ($cargo) {
+    Push-Location (Join-Path $root "core\pasus_guard_service")
+    try {
+      cargo build --release
+    } finally {
+      Pop-Location
+    }
+  }
+}
+
+New-Item -ItemType Directory -Force -Path (Split-Path $wxsPath) | Out-Null
+Copy-Tree $releaseDir $stageDir
+
+if (-not (Test-Path $modelFile) -or -not (Test-Path $modelMetadataFile)) {
+  throw "Pasus AI model assets are required: $modelFile and $modelMetadataFile"
+}
+$modelMetadata = Get-Content -Raw -LiteralPath $modelMetadataFile | ConvertFrom-Json
+if (-not $modelMetadata.production_ready -and -not $AllowDevelopmentModel) {
+  throw "The packaged AI model is marked production_ready=false. Provide a validated production model or pass -AllowDevelopmentModel for an explicitly non-production build."
+}
+$stageModelDir = Join-Path $stageDir "assets\models"
+$releaseModelDir = Join-Path $releaseDir "assets\models"
+Copy-Tree $modelSourceDir $stageModelDir
+Copy-Tree $modelSourceDir $releaseModelDir
+
+$coreSource = $null
+if (Test-Path $localCoreExe) {
+  $coreSource = $localCoreExe
+} elseif (Test-Path $localCoreExeDefault) {
+  $coreSource = $localCoreExeDefault
+} elseif (Test-Path $localCoreExeGnu) {
+  $coreSource = $localCoreExeGnu
+}
+
+if ($coreSource) {
+  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $stageDir "pasus_local_core.exe") -Force
+  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $releaseDir "pasus_local_core.exe") -Force
+} elseif ($RequireLocalCore) {
+  throw "pasus_local_core.exe was not found. Build it for Windows first or run without -RequireLocalCore."
+} else {
+  Write-Warning "pasus_local_core.exe was not found. The MSI will install the app, but local malware scanning will show Engine Unavailable until the core is deployed."
+}
+
+if (Test-Path $guardServiceExeDefault) {
+  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $stageDir "pasus_guard_service.exe") -Force
+  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $releaseDir "pasus_guard_service.exe") -Force
+} else {
+  Write-Warning "pasus_guard_service.exe was not found. The MSI will not include the real-time Guard helper."
+}
+
+if (-not $SkipClamAV) {
+  Ensure-ClamAVPackage $clamAvZipPath $clamAvUrl
+  Copy-ClamAVRuntime $clamAvZipPath $clamAvExtractDir (Join-Path $stageDir "ClamAV")
+  Copy-ClamAVRuntime $clamAvZipPath $clamAvExtractDir (Join-Path $releaseDir "ClamAV")
+  Write-Host "Bundled ClamAV $clamAvVersion runtime in the MSI."
+} else {
+  Write-Warning "Skipping bundled ClamAV. Signature scanning will require clamdscan/clamscan on PATH or PASUS_CLAMAV_CLAMSCAN."
+}
+
+$runtimeDlls = @(
+  "C:\Windows\System32\vcruntime140.dll",
+  "C:\Windows\System32\vcruntime140_1.dll",
+  "C:\Windows\System32\msvcp140.dll"
+)
+foreach ($dll in $runtimeDlls) {
+  if (Test-Path $dll) {
+    Copy-Item -LiteralPath $dll -Destination $stageDir -Force
+  } else {
+    Write-Warning "Visual C++ runtime file missing on this machine: $dll"
+  }
+}
+
+$docsStage = Join-Path $stageDir "docs"
+New-Item -ItemType Directory -Force -Path $docsStage | Out-Null
+Copy-Item -LiteralPath (Join-Path $root "README.md") -Destination $docsStage -Force
+Copy-Item -LiteralPath (Join-Path $root "docs\privacy.md") -Destination $docsStage -Force
+Copy-Item -LiteralPath (Join-Path $root "docs\malware-protection.md") -Destination $docsStage -Force
+Copy-Item -LiteralPath (Join-Path $root "docs\quarantine.md") -Destination $docsStage -Force
+
+$files = Get-ChildItem -LiteralPath $stageDir -Recurse -File |
+  Where-Object { $_.Extension -ne ".pdb" } |
+  Sort-Object FullName
+
+$directories = @{}
+foreach ($file in $files) {
+  $relativeDir = Get-RelativePath $stageDir $file.DirectoryName
+  if ($relativeDir -eq ".") { continue }
+  $parts = $relativeDir -split "[/\\]"
+  $current = ""
+  foreach ($part in $parts) {
+    $current = if ($current) { Join-Path $current $part } else { $part }
+    if (-not $directories.ContainsKey($current)) {
+      $parent = [IO.Path]::GetDirectoryName($current)
+      $directories[$current] = [ordered]@{
+        Id = "DIR_" + (To-WixId $current)
+        Name = $part
+        Parent = if ($parent) { "DIR_" + (To-WixId $parent) } else { "INSTALLFOLDER" }
+      }
+    }
+  }
+}
+
+$directoryXml = New-Object System.Text.StringBuilder
+foreach ($dir in $directories.GetEnumerator() | Sort-Object { $_.Key.Split('\').Count }) {
+  [void]$directoryXml.AppendLine("    <DirectoryRef Id=`"$($dir.Value.Parent)`">")
+  [void]$directoryXml.AppendLine("      <Directory Id=`"$($dir.Value.Id)`" Name=`"$(XmlEscape $dir.Value.Name)`" />")
+  [void]$directoryXml.AppendLine("    </DirectoryRef>")
+}
+
+$componentsXml = New-Object System.Text.StringBuilder
+$componentRefsXml = New-Object System.Text.StringBuilder
+$index = 0
+foreach ($file in $files) {
+  $index++
+  $relativePath = Get-RelativePath $stageDir $file.FullName
+  $relativeDir = [IO.Path]::GetDirectoryName($relativePath)
+  $directoryId = if ([string]::IsNullOrEmpty($relativeDir)) { "INSTALLFOLDER" } else { "DIR_" + (To-WixId $relativeDir) }
+  $componentId = "CMP_$index"
+  $fileId = "FIL_$index"
+  [void]$componentsXml.AppendLine("    <DirectoryRef Id=`"$directoryId`">")
+  [void]$componentsXml.AppendLine("      <Component Id=`"$componentId`" Guid=`"*`">")
+  [void]$componentsXml.AppendLine("        <File Id=`"$fileId`" Source=`"$(XmlEscape $file.FullName)`" KeyPath=`"yes`" />")
+  [void]$componentsXml.AppendLine("      </Component>")
+  [void]$componentsXml.AppendLine("    </DirectoryRef>")
+  [void]$componentRefsXml.AppendLine("      <ComponentRef Id=`"$componentId`" />")
+}
+
+$upgradeCode = "35E0D125-9699-4CFB-8E93-588D0E83F517"
+$wxs = @"
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Pasus"
+    Manufacturer="Pasus"
+    Version="$Version"
+    UpgradeCode="$upgradeCode"
+    Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Pasus is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Pasus" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Pasus" />
+    </StandardDirectory>
+
+$directoryXml
+$componentsXml
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuShortcut" Guid="*">
+        <Shortcut Id="PasusStartMenuShortcut" Name="Pasus" Target="[INSTALLFOLDER]Pasus.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Pasus\Client" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="MainFeature" Title="Pasus" Level="1">
+$componentRefsXml
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+  </Package>
+</Wix>
+"@
+
+Set-Content -LiteralPath $wxsPath -Value $wxs -Encoding UTF8
+
+dotnet tool restore
+dotnet wix build $wxsPath -arch x64 -o $msiPath
+
+Write-Host "Created MSI: $msiPath"

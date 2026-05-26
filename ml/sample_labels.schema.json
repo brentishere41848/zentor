@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pasus Training Label JSONL Record",
+  "type": "object",
+  "required": [
+    "label_id",
+    "file_sha256",
+    "file_name",
+    "file_path_category",
+    "extracted_features",
+    "previous_verdict",
+    "user_label",
+    "created_at",
+    "app_version",
+    "model_version"
+  ],
+  "properties": {
+    "label_id": { "type": "string" },
+    "file_sha256": { "type": "string" },
+    "file_name": { "type": "string" },
+    "file_path_category": { "type": "string" },
+    "extracted_features": { "$ref": "feature_schema.json" },
+    "previous_verdict": { "type": "string" },
+    "user_label": {
+      "type": "string",
+      "enum": [
+        "falsePositive",
+        "confirmedMalicious",
+        "unsure",
+        "trustedApp",
+        "potentiallyUnwantedButAllowed"
+      ]
+    },
+    "user_note": { "type": ["string", "null"] },
+    "created_at": { "type": "string" },
+    "app_version": { "type": "string" },
+    "model_version": { "type": "string" }
+  }
+}

@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pasus
+      POSTGRES_PASSWORD: pasus
+      POSTGRES_DB: pasus
+    ports:
+      - "15432:5432"
+    volumes:
+      - pasus_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pasus -d pasus"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://pasus:pasus@postgres:5432/pasus
+      REDIS_URL: redis://redis:6379
+      PASUS_API_BIND_ADDR: 0.0.0.0:8000
+      PASUS_DEV_PROJECT_ID: pasus-default
+      PASUS_DEV_PUBLIC_GAME_KEY: pasus-public-client
+      RUST_LOG: pasus_api=info,tower_http=info
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pasus_postgres:

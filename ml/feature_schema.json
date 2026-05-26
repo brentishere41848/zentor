@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pasus Static Malware Feature Schema",
+  "type": "object",
+  "required": [
+    "file_size",
+    "file_extension",
+    "location_category",
+    "double_extension",
+    "embedded_urls_count",
+    "embedded_ip_addresses_count",
+    "suspicious_strings_count",
+    "entropy",
+    "packed_likely",
+    "macro_or_script"
+  ],
+  "properties": {
+    "file_size": { "type": "integer", "minimum": 0 },
+    "file_extension": { "type": "string" },
+    "location_category": {
+      "type": "string",
+      "enum": ["downloads", "temp", "startup", "system", "programFiles", "userProfile", "unknown"]
+    },
+    "double_extension": { "type": "boolean" },
+    "embedded_urls_count": { "type": "integer", "minimum": 0 },
+    "embedded_ip_addresses_count": { "type": "integer", "minimum": 0 },
+    "suspicious_strings_count": { "type": "integer", "minimum": 0 },
+    "entropy": { "type": "number", "minimum": 0, "maximum": 8 },
+    "packed_likely": { "type": "boolean" },
+    "macro_or_script": { "type": "boolean" }
+  }
+}
