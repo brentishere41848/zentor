@@ -61,12 +61,25 @@ jobs:
       - name: Restore WiX tool
         run: dotnet tool restore
 
-      - name: Build Windows installers
+      - name: Build Flutter Windows app
+        working-directory: apps/pasus_client
+        run: flutter build windows --release
+
+      - name: Build local scan core
+        working-directory: core/pasus_local_core
+        run: cargo build --release
+
+      - name: Build guard service
+        working-directory: core/pasus_guard_service
+        run: cargo build --release
+
+      - name: Package Windows installers
         shell: pwsh
         run: |
           $scriptArgs = @(
             "-Version", "${{ steps.version.outputs.version }}",
-            "-RequireLocalCore"
+            "-RequireLocalCore",
+            "-SkipFlutterBuild"
           )
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             if ("${{ inputs.allow_development_model }}" -eq "true") {
