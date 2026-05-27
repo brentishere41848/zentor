@@ -75,6 +75,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: 'Protection',
           children: [
             _ValueRow('Antivirus', state.protectionStatus.label),
+            _ValueRow('Guard mode', _guardLabel(state.guardStatus)),
+            _ValueRow('Driver status', _driverLabel(state.driverStatus)),
             _ValueRow(
               'Realtime monitoring',
               state.config.realtimeProtectionEnabled
@@ -94,6 +96,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             _ValueRow('Engine status', state.malwareEngineStatus.label),
             const _ValueRow('Provider', 'ClamAV through Pasus local core'),
+            _ValueRow(
+              'YARA rules',
+              state.yaraStatus == 'available'
+                  ? '${state.yaraRuleCount} packaged rules loaded'
+                  : 'Rules unavailable',
+            ),
             PasusButton(
               label: 'Check engine',
               icon: Icons.health_and_safety_outlined,
@@ -217,6 +225,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
+
+String _guardLabel(String status) => switch (status) {
+  'blockConfirmedThreats' => 'Block confirmed threats',
+  'monitorOnly' => 'Monitor only',
+  'aggressive' => 'Aggressive',
+  _ => 'Off',
+};
+
+String _driverLabel(String status) => switch (status) {
+  'running' => 'Running',
+  'installed' => 'Installed',
+  'testSigned' => 'Test-signed',
+  'blockedByOs' => 'Blocked by OS',
+  _ => 'Missing',
+};
 
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.children});

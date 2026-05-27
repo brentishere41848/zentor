@@ -57,6 +57,7 @@ fn handle(command: CoreCommand) -> serde_json::Value {
                 "ai_status": ai::ModelRunner::default().status(),
                 "ai_model": ai::ModelRunner::default().info(),
                 "guard_status": protection::GuardService::default().status(),
+                "driver_status": "missing",
                 "reputation_status": ReputationProvider.status(),
                 "ipc": "stdio",
                 "network_exposed": false,

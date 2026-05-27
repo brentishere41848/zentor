@@ -105,6 +105,16 @@ class ProtectionScreen extends ConsumerWidget {
                 icon: Icons.shield_outlined,
               ),
               PasusMetricCard(
+                title: 'Pre-execution blocking',
+                value: state.driverStatus == 'running'
+                    ? 'Driver active'
+                    : 'Not active',
+                detail: state.driverStatus == 'running'
+                    ? 'Driver-assisted blocking can be used for verdict requests.'
+                    : 'Current release uses post-launch user-mode stopping when confirmed threats are observed.',
+                icon: Icons.block_outlined,
+              ),
+              PasusMetricCard(
                 title: 'Malware engine',
                 value: state.malwareEngineStatus.label,
                 detail:
@@ -112,6 +122,15 @@ class ProtectionScreen extends ConsumerWidget {
                     ? 'Install the Pasus MSI with bundled ClamAV, or configure ClamAV for development.'
                     : 'Ready for local scans.',
                 icon: Icons.health_and_safety_outlined,
+              ),
+              PasusMetricCard(
+                title: 'YARA rules',
+                value: state.yaraStatus == 'available'
+                    ? '${state.yaraRuleCount} rules'
+                    : 'Unavailable',
+                detail:
+                    'Conservative local rules supplement signature, AI, and heuristic analysis.',
+                icon: Icons.rule_folder_outlined,
               ),
               PasusMetricCard(
                 title: 'Cloud',

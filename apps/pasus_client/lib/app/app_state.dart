@@ -70,6 +70,10 @@ class PasusState {
     this.gameVerificationStatus = GameVerificationStatus.notConfigured,
     this.malwareEngineStatus = MalwareEngineStatus.checking,
     this.aiModelInfo = const AiModelInfo(),
+    this.yaraStatus = 'rulesUnavailable',
+    this.yaraRuleCount = 0,
+    this.guardStatus = 'off',
+    this.driverStatus = 'missing',
     this.scanStatus = ScanStatus.idle,
     this.scanActionMode = ScanActionMode.detectOnly,
     this.scanProgress,
@@ -92,6 +96,10 @@ class PasusState {
   final GameVerificationStatus gameVerificationStatus;
   final MalwareEngineStatus malwareEngineStatus;
   final AiModelInfo aiModelInfo;
+  final String yaraStatus;
+  final int yaraRuleCount;
+  final String guardStatus;
+  final String driverStatus;
   final ScanStatus scanStatus;
   final ScanActionMode scanActionMode;
   final ScanProgress? scanProgress;
@@ -114,6 +122,10 @@ class PasusState {
     GameVerificationStatus? gameVerificationStatus,
     MalwareEngineStatus? malwareEngineStatus,
     AiModelInfo? aiModelInfo,
+    String? yaraStatus,
+    int? yaraRuleCount,
+    String? guardStatus,
+    String? driverStatus,
     ScanStatus? scanStatus,
     ScanActionMode? scanActionMode,
     ScanProgress? scanProgress,
@@ -142,6 +154,10 @@ class PasusState {
           gameVerificationStatus ?? this.gameVerificationStatus,
       malwareEngineStatus: malwareEngineStatus ?? this.malwareEngineStatus,
       aiModelInfo: aiModelInfo ?? this.aiModelInfo,
+      yaraStatus: yaraStatus ?? this.yaraStatus,
+      yaraRuleCount: yaraRuleCount ?? this.yaraRuleCount,
+      guardStatus: guardStatus ?? this.guardStatus,
+      driverStatus: driverStatus ?? this.driverStatus,
       scanStatus: scanStatus ?? this.scanStatus,
       scanActionMode: scanActionMode ?? this.scanActionMode,
       scanProgress: clearScanProgress
@@ -302,6 +318,10 @@ class PasusController extends StateNotifier<PasusState> {
     state = state.copyWith(
       malwareEngineStatus: status,
       aiModelInfo: health.aiModelInfo,
+      yaraStatus: health.yaraStatus,
+      yaraRuleCount: health.yaraRuleCount,
+      guardStatus: health.guardStatus,
+      driverStatus: health.driverStatus,
     );
   }
 

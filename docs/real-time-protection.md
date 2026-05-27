@@ -15,3 +15,5 @@ Auto-stop/quarantine is allowed only for confirmed threats:
 - Confirmed high-confidence YARA known-malware rule.
 
 Suspicious or low-confidence results are review-only.
+
+When the user-mode Guard stops a process, it writes the same quarantine metadata shape used by manual scans so the file appears in the Pasus Quarantine UI and can be restored or deleted with confirmation. Medium-confidence YARA/script rules are monitored and logged for review; they do not stop or quarantine a process by themselves.

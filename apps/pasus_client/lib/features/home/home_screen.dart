@@ -129,11 +129,31 @@ class HomeScreen extends ConsumerWidget {
             : '${state.aiModelInfo.message} AI-only detections stay review-only.',
         icon: Icons.psychology_alt_outlined,
       ),
-      const PasusMetricCard(
-        title: 'Behavior Guard',
-        value: 'Monitor ready',
+      PasusMetricCard(
+        title: 'Pre-execution Blocking',
+        value: state.driverStatus == 'running'
+            ? 'Driver active'
+            : 'Driver missing',
+        detail: state.driverStatus == 'running'
+            ? 'Kernel driver reports active. Blocking claims depend on driver verdicts.'
+            : 'Post-launch user-mode stopping is available; true pre-execution blocking needs the signed driver.',
+        icon: Icons.block_outlined,
+      ),
+      PasusMetricCard(
+        title: 'YARA Rules',
+        value: state.yaraStatus == 'available'
+            ? '${state.yaraRuleCount} rules loaded'
+            : 'Rules unavailable',
         detail:
-            'User-mode protection watches selected behavior without kernel drivers in v1.',
+            'YARA detections use packaged local rules. Review-only rules do not auto-quarantine.',
+        icon: Icons.rule_folder_outlined,
+      ),
+      PasusMetricCard(
+        title: 'Behavior Guard',
+        value: _guardLabel(state.guardStatus),
+        detail: state.driverStatus == 'running'
+            ? 'Driver-assisted guard path is available.'
+            : 'User-mode guard can stop confirmed threats after launch.',
         icon: Icons.policy_outlined,
       ),
       const PasusMetricCard(
@@ -311,4 +331,11 @@ class HomeScreen extends ConsumerWidget {
     if (status == 'Scan Running') return PasusColors.primaryAccent;
     return PasusColors.warning;
   }
+
+  String _guardLabel(String status) => switch (status) {
+    'blockConfirmedThreats' => 'Block confirmed threats',
+    'monitorOnly' => 'Monitor only',
+    'aggressive' => 'Aggressive',
+    _ => 'Off',
+  };
 }

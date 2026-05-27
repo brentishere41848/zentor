@@ -31,6 +31,10 @@ class LocalCoreClient {
       aiModelInfo: aiModelRaw is Map
           ? _aiModelInfoFromJson(Map<String, Object?>.from(aiModelRaw))
           : const AiModelInfo(),
+      yaraStatus: response['yara_status'] as String? ?? 'rulesUnavailable',
+      yaraRuleCount: response['yara_rule_count'] as int? ?? 0,
+      guardStatus: response['guard_status'] as String? ?? 'off',
+      driverStatus: response['driver_status'] as String? ?? 'missing',
     );
   }
 
@@ -466,8 +470,16 @@ class LocalCoreHealth {
   const LocalCoreHealth({
     this.malwareEngineStatus = MalwareEngineStatus.unavailable,
     this.aiModelInfo = const AiModelInfo(),
+    this.yaraStatus = 'rulesUnavailable',
+    this.yaraRuleCount = 0,
+    this.guardStatus = 'off',
+    this.driverStatus = 'missing',
   });
 
   final MalwareEngineStatus malwareEngineStatus;
   final AiModelInfo aiModelInfo;
+  final String yaraStatus;
+  final int yaraRuleCount;
+  final String guardStatus;
+  final String driverStatus;
 }

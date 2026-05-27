@@ -2,6 +2,8 @@
 
 When scan mode allows quarantine and Pasus finds a confirmed infected file, Pasus automatically quarantines it. Detect-only scans never quarantine or delete files.
 
+The same quarantine store is used by manual scans and Pasus Guard. If the Guard stops a confirmed threat after launch, it moves the executable into this store and writes a JSON record with the action taken.
+
 ## Behavior
 
 Pasus:
