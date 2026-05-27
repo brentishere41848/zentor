@@ -1,6 +1,6 @@
 # Pasus
 
-Pasus is a privacy-first desktop antivirus and security client with optional gaming protection. It is a real Flutter application for Android, iOS, Windows, macOS, and Linux, with a Rust local core for desktop malware scanning and quarantine.
+Pasus is a privacy-first desktop anti-malware and security client. It is a real Flutter application for Android, iOS, Windows, macOS, and Linux, with a Rust local core for desktop malware scanning and quarantine.
 
 Pasus v1 runs Quick Scan, Full Scan, and Custom Scan flows fully offline. Scanning, quarantine, allowlist, logs, and scan results do not require Pasus Cloud, an account, an API, a login, or internet. Runtime data comes only from local state, local configuration, real API responses when optional cloud features are enabled, selected path hashing, local core results, and real errors.
 
@@ -9,6 +9,7 @@ Pasus v1 runs Quick Scan, Full Scan, and Custom Scan flows fully offline. Scanni
 ```text
 apps/
   pasus_client/          Flutter 3 Material 3 client application
+  pasus_website/         Next.js marketing website for Pasus Anti-Malware
 packages/
   pasus_protocol/        Shared Dart protocol and state models
 core/
@@ -184,9 +185,19 @@ When scan mode allows quarantine and a confirmed infected file is detected, Pasu
 
 Allowlist entries are explicit. Pasus blocks unsafe root paths such as `C:\`, `C:\Windows`, `/`, `/usr`, `/bin`, `/sbin`, and `/etc`.
 
-## Gaming Protection
+## Website
 
-Gaming protection is optional. Pasus can check running processes and known launcher or install metadata locations such as Steam, Epic, GOG, macOS Applications, Linux desktop/common game paths, and selected manual paths. It does not block antivirus protection when no game is configured.
+The marketing website lives in `apps/pasus_website`.
+
+```powershell
+cd apps/pasus_website
+npm install
+npm run dev
+npm run build
+npm test
+```
+
+The website presents Pasus as `Pasus Anti-Malware`, shows licensing as coming soon, offers a waitlist, and links only to real release assets when they exist.
 
 ## Build
 

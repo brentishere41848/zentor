@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../features/allowlist/allowlist_screen.dart';
 import '../features/device/device_screen.dart';
-import '../features/games/games_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/logs/logs_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -27,7 +26,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             PasusShell(location: state.uri.path, child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
-          GoRoute(path: '/gaming', builder: (_, _) => const GamesScreen()),
           GoRoute(path: '/scan', builder: (_, _) => const ScanScreen()),
           GoRoute(
             path: '/quarantine',

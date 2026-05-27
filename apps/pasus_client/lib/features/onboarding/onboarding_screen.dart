@@ -27,12 +27,12 @@ class OnboardingScreen extends ConsumerWidget {
                     const PasusMark(size: 72),
                     const SizedBox(height: 26),
                     Text(
-                      'Pasus protects fair play.',
+                      'Pasus protects your device.',
                       style: Theme.of(context).textTheme.displaySmall,
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Pasus verifies your game session, game build, and protection status while keeping the user visibly in control.',
+                      'Pasus scans, reviews, blocks, and quarantines threats while keeping protection visible and under your control.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: PasusColors.textSecondary,
                       ),
@@ -40,8 +40,7 @@ class OnboardingScreen extends ConsumerWidget {
                     const SizedBox(height: 28),
                     const _OnboardingPoint(
                       icon: Icons.verified_user_outlined,
-                      text:
-                          'Pasus verifies your game session, game build, and protection status.',
+                      text: 'Pasus checks local files and protection status.',
                     ),
                     const _OnboardingPoint(
                       icon: Icons.folder_off_outlined,

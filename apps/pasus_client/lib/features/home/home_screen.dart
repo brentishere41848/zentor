@@ -216,14 +216,6 @@ class HomeScreen extends ConsumerWidget {
         detail: _updateDetail(state),
         icon: Icons.system_update_alt_outlined,
       ),
-      PasusMetricCard(
-        title: 'Gaming Protection',
-        value: 'Optional',
-        detail: state.config.gameConfig.isConfigured
-            ? state.config.gameConfig.gameName
-            : 'Game verification is available when you need it.',
-        icon: Icons.sports_esports_outlined,
-      ),
     ];
 
     final recent = PasusPanel(
@@ -339,7 +331,7 @@ class HomeScreen extends ConsumerWidget {
     if (state.protectionStatus == ProtectionStatus.localOnly) {
       return 'Local protection is active. Pasus Cloud is offline and does not block scanning or quarantine.';
     }
-    return 'Antivirus protection and optional gaming verification, visible and under your control.';
+    return 'Anti-malware protection, quarantine, and local threat review, visible and under your control.';
   }
 
   Color _mainColor(PasusState state) {

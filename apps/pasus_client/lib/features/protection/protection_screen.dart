@@ -47,7 +47,7 @@ class ProtectionScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               const Text(
-                'Pasus protects this device with visible local scanning, quarantine controls, and optional cloud reporting. Gaming protection is available separately and is not required.',
+                'Pasus protects this device with visible local scanning, quarantine controls, real-time guard status, and optional cloud reporting.',
                 style: TextStyle(
                   color: PasusColors.textSecondary,
                   height: 1.45,
@@ -161,15 +161,6 @@ class ProtectionScreen extends ConsumerWidget {
                     : '${state.quarantine.length} items',
                 detail: 'Nothing is permanently deleted automatically.',
                 icon: Icons.inventory_2_outlined,
-              ),
-              PasusMetricCard(
-                title: 'Gaming protection',
-                value: state.config.gameConfig.isConfigured
-                    ? state.config.gameConfig.gameName
-                    : 'Optional',
-                detail:
-                    'Game verification does not block antivirus protection.',
-                icon: Icons.sports_esports_outlined,
               ),
             ];
             if (constraints.maxWidth < 900) {

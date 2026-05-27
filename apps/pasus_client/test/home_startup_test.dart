@@ -30,8 +30,7 @@ void main() {
 
     expect(find.text('API Base URL'), findsNothing);
     expect(find.textContaining('required'), findsNothing);
-    expect(find.textContaining('No game configured'), findsNothing);
-    expect(find.textContaining('No game selected'), findsNothing);
+    expect(find.textContaining('Gaming Protection'), findsNothing);
     expect(find.textContaining('Cloud: Disabled'), findsWidgets);
     expect(find.text('Run Quick Scan'), findsWidgets);
     expect(find.text('Run Full Scan'), findsWidgets);

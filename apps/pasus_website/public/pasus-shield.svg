@@ -1,0 +1,6 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#07111F"/>
+  <path d="M600 110L820 200V350C820 475 737 570 600 605C463 570 380 475 380 350V200L600 110Z" fill="#126BFF"/>
+  <path d="M600 205L735 260V350C735 430 682 497 600 528C518 497 465 430 465 350V260L600 205Z" fill="#14C8A8"/>
+  <text x="600" y="72" text-anchor="middle" fill="#FFFFFF" font-family="Arial" font-size="44" font-weight="700">Pasus Anti-Malware</text>
+</svg>

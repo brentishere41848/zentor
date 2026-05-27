@@ -16,8 +16,7 @@ class PasusBottomNav extends StatelessWidget {
               destination.path == '/home' ||
               destination.path == '/scan' ||
               destination.path == '/quarantine' ||
-              destination.path == '/settings' ||
-              destination.path == '/gaming',
+              destination.path == '/settings',
         )
         .toList();
     final selectedIndex = mobileDestinations.indexWhere(

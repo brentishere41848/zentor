@@ -75,14 +75,9 @@ class PasusShell extends ConsumerWidget {
     );
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topRight,
-            radius: 1.25,
-            colors: [Color(0x1F26D9FF), PasusColors.background],
-          ),
-        ),
+      backgroundColor: PasusColors.background,
+      body: ColoredBox(
+        color: PasusColors.background,
         child: isDesktop
             ? Row(
                 children: [
@@ -99,7 +94,6 @@ class PasusShell extends ConsumerWidget {
   }
 
   String _titleFor(String location) {
-    if (location.startsWith('/gaming')) return 'Gaming Protection';
     if (location.startsWith('/scan')) return 'Scan';
     if (location.startsWith('/quarantine')) return 'Quarantine';
     if (location.startsWith('/allowlist')) return 'Allowlist';

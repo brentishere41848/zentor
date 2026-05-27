@@ -172,12 +172,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ? 'Enabled for protected locations'
                   : 'Off',
             ),
-            _ValueRow(
-              'Gaming',
-              state.config.gameConfig.gameName.isEmpty
-                  ? 'Optional'
-                  : state.config.gameConfig.gameName,
-            ),
           ],
         ),
         _Section(

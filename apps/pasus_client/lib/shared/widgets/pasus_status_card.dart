@@ -51,19 +51,12 @@ class PasusMark extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(size * 0.25),
-        gradient: const LinearGradient(
-          colors: [PasusColors.primaryAccent, PasusColors.secondaryAccent],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: PasusColors.primaryAccent.withValues(alpha: 0.22),
-            blurRadius: 36,
-          ),
-        ],
+        color: PasusColors.elevatedSurface,
+        border: Border.all(color: PasusColors.border),
       ),
       child: Icon(
         Icons.shield_outlined,
-        color: PasusColors.background,
+        color: PasusColors.primaryAccent,
         size: size * 0.54,
       ),
     );

@@ -25,11 +25,6 @@ const pasusDestinations = [
   PasusNavDestination('/logs', 'Security Events', Icons.receipt_long_outlined),
   PasusNavDestination('/device', 'Device', Icons.devices_outlined),
   PasusNavDestination('/settings', 'Settings', Icons.settings_outlined),
-  PasusNavDestination(
-    '/gaming',
-    'Gaming Protection',
-    Icons.sports_esports_outlined,
-  ),
 ];
 
 class PasusSidebar extends StatelessWidget {
