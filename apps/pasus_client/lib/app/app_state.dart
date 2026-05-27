@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pasus_protocol/pasus_protocol.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/config_repository.dart';
 import '../core/games/game_detector.dart';
@@ -15,6 +16,7 @@ import '../core/platform/platform_info_service.dart';
 import '../core/scanning/scan_target_service.dart';
 import '../core/security/device_hash_service.dart';
 import '../core/security/hash_service.dart';
+import '../core/updates/update_service.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw StateError('SharedPreferences must be overridden at startup.');
@@ -43,6 +45,9 @@ final deviceHashServiceProvider = Provider<DeviceHashService>(
 final platformInfoServiceProvider = Provider<PlatformInfoService>(
   (ref) => PlatformInfoService(ref.watch(deviceHashServiceProvider)),
 );
+final updateServiceProvider = Provider<PasusUpdateService>(
+  (ref) => PasusUpdateService(),
+);
 
 final pasusControllerProvider =
     StateNotifierProvider<PasusController, PasusState>((ref) {
@@ -54,6 +59,7 @@ final pasusControllerProvider =
         gameDetector: ref.watch(gameDetectorProvider),
         localCoreClient: ref.watch(localCoreClientProvider),
         scanTargetService: ref.watch(scanTargetServiceProvider),
+        updateService: ref.watch(updateServiceProvider),
       )..load();
     });
 
@@ -88,6 +94,10 @@ class PasusState {
     this.hashProgress,
     this.currentScanPath,
     this.protectionSelfTestResult,
+    this.updateStatus = UpdateStatus.notChecked,
+    this.currentAppVersion = 'Unknown',
+    this.updateInfo,
+    this.updateError,
   });
 
   final PasusConfig config;
@@ -115,6 +125,10 @@ class PasusState {
   final double? hashProgress;
   final String? currentScanPath;
   final String? protectionSelfTestResult;
+  final UpdateStatus updateStatus;
+  final String currentAppVersion;
+  final UpdateInfo? updateInfo;
+  final String? updateError;
 
   PasusState copyWith({
     PasusConfig? config,
@@ -148,6 +162,12 @@ class PasusState {
     bool clearCurrentScanPath = false,
     String? protectionSelfTestResult,
     bool clearProtectionSelfTestResult = false,
+    UpdateStatus? updateStatus,
+    String? currentAppVersion,
+    UpdateInfo? updateInfo,
+    bool clearUpdateInfo = false,
+    String? updateError,
+    bool clearUpdateError = false,
   }) {
     return PasusState(
       config: config ?? this.config,
@@ -184,6 +204,10 @@ class PasusState {
       protectionSelfTestResult: clearProtectionSelfTestResult
           ? null
           : protectionSelfTestResult ?? this.protectionSelfTestResult,
+      updateStatus: updateStatus ?? this.updateStatus,
+      currentAppVersion: currentAppVersion ?? this.currentAppVersion,
+      updateInfo: clearUpdateInfo ? null : updateInfo ?? this.updateInfo,
+      updateError: clearUpdateError ? null : updateError ?? this.updateError,
     );
   }
 }
@@ -197,6 +221,7 @@ class PasusController extends StateNotifier<PasusState> {
     required GameDetector gameDetector,
     required LocalCoreClient localCoreClient,
     required ScanTargetService scanTargetService,
+    required PasusUpdateService updateService,
   }) : this._(
          configRepository,
          eventRepository,
@@ -205,6 +230,7 @@ class PasusController extends StateNotifier<PasusState> {
          gameDetector,
          localCoreClient,
          scanTargetService,
+         updateService,
        );
 
   PasusController._(
@@ -215,6 +241,7 @@ class PasusController extends StateNotifier<PasusState> {
     this._gameDetector,
     this._localCoreClient,
     this._scanTargetService,
+    this._updateService,
   ) : super(const PasusState());
 
   final ConfigRepository _configRepository;
@@ -224,6 +251,7 @@ class PasusController extends StateNotifier<PasusState> {
   final GameDetector _gameDetector;
   final LocalCoreClient _localCoreClient;
   final ScanTargetService _scanTargetService;
+  final PasusUpdateService _updateService;
   bool _scanCancelled = false;
 
   void load() {
@@ -239,6 +267,7 @@ class PasusController extends StateNotifier<PasusState> {
     unawaitedDetectGames();
     unawaitedCheckMalwareEngine();
     unawaitedRefreshQuarantine();
+    unawaitedCheckForUpdates(silent: true);
   }
 
   Future<void> logEvent(String type, String message, {String? details}) async {
@@ -270,6 +299,62 @@ class PasusController extends StateNotifier<PasusState> {
   }
 
   Future<void> testCloudConnection() => unawaitedCheckCloud();
+
+  Future<void> unawaitedCheckForUpdates({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent) {
+      await logEvent('update_check_started', 'Update check started');
+    }
+    state = state.copyWith(
+      updateStatus: UpdateStatus.checking,
+      clearUpdateError: true,
+    );
+    final result = await _updateService.checkForUpdate();
+    if (!mounted) return;
+    state = state.copyWith(
+      updateStatus: result.status,
+      currentAppVersion: result.currentVersion,
+      updateInfo: result.update,
+      clearUpdateInfo: result.update == null,
+      updateError: result.error,
+      clearUpdateError: result.error == null,
+    );
+    if (result.status == UpdateStatus.updateAvailable &&
+        result.update != null) {
+      await logEvent(
+        'update_available',
+        'Update available',
+        details: 'Pasus ${result.update!.latestVersion}',
+      );
+    } else if (!silent && result.status == UpdateStatus.upToDate) {
+      await logEvent('update_check_completed', 'Pasus is up to date');
+    } else if (!silent && result.status == UpdateStatus.failed) {
+      await logEvent(
+        'update_check_failed',
+        'Update check failed',
+        details: result.error,
+      );
+    }
+  }
+
+  Future<void> openUpdateDownload() async {
+    final update = state.updateInfo;
+    if (update == null) {
+      await unawaitedCheckForUpdates();
+      return;
+    }
+    final uri = update.downloadUrl ?? update.releaseUrl;
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      state = state.copyWith(errorMessage: 'Unable to open update link.');
+      return;
+    }
+    await logEvent(
+      'update_download_opened',
+      'Update download opened',
+      details: uri.toString(),
+    );
+  }
 
   Future<void> saveDeveloperCloudOverride({
     required bool enabled,

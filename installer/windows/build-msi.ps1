@@ -118,6 +118,14 @@ function Get-RelativePath([string]$Base, [string]$Path) {
   return $pathFull
 }
 
+function Get-FlutterBuildNumber([string]$Version) {
+  $buildNumber = [regex]::Replace($Version, "[^0-9]", "")
+  if ([string]::IsNullOrWhiteSpace($buildNumber)) {
+    return "1"
+  }
+  return $buildNumber
+}
+
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $clientDir = Join-Path $root "apps\pasus_client"
 $releaseDir = Join-Path $clientDir "build\windows\x64\runner\$Configuration"
@@ -155,7 +163,8 @@ if (-not $SkipFlutterBuild) {
   }
   Push-Location $clientDir
   try {
-    Invoke-Checked { & $flutter build windows --release } "Flutter Windows release build failed."
+    $buildNumber = Get-FlutterBuildNumber $Version
+    Invoke-Checked { & $flutter build windows --release --build-name $Version --build-number $buildNumber "--dart-define=PASUS_APP_VERSION=$Version" } "Flutter Windows release build failed."
   } finally {
     Pop-Location
   }

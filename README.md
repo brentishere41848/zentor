@@ -110,6 +110,20 @@ Cloud is optional. The app defaults to local protection and does not call Pasus 
 
 Developer endpoint overrides are hidden under `Settings > Advanced > Developer options`.
 
+## App Updates
+
+Pasus checks GitHub Releases for newer tagged builds and shows a visible update state in Home and `Settings > Updates`. It does not silently install updates. When a newer release exists, the user can choose `Download Update`, which opens the release installer or GitHub release page.
+
+Release builds should be tagged with `vMAJOR.MINOR.PATCH`. The Windows release workflow builds Flutter with the tag version, publishes MSI/EXE assets, and the installed app compares that local version against the latest GitHub release.
+
+Override the update repository at build time when needed:
+
+```powershell
+flutter build windows --release `
+  --dart-define=PASUS_UPDATES_REPO_OWNER=YOUR_GITHUB_USER `
+  --dart-define=PASUS_UPDATES_REPO_NAME=YOUR_REPO
+```
+
 ## Desktop Local Core
 
 ```powershell

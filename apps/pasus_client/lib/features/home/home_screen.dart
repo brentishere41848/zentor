@@ -5,6 +5,7 @@ import 'package:pasus_protocol/pasus_protocol.dart';
 
 import '../../app/app_state.dart';
 import '../../app/theme/pasus_colors.dart';
+import '../../core/updates/update_service.dart';
 import '../../shared/widgets/pasus_button.dart';
 import '../../shared/widgets/pasus_empty_state.dart';
 import '../../shared/widgets/pasus_metric_card.dart';
@@ -86,6 +87,13 @@ class HomeScreen extends ConsumerWidget {
                     ? controller.startProtection
                     : controller.stopProtection,
               ),
+              if (state.updateStatus == UpdateStatus.updateAvailable)
+                PasusButton(
+                  label: 'Download Update',
+                  icon: Icons.system_update_alt_outlined,
+                  secondary: true,
+                  onPressed: controller.openUpdateDownload,
+                ),
             ],
           ),
           if (state.errorMessage != null) ...[
@@ -204,8 +212,8 @@ class HomeScreen extends ConsumerWidget {
       ),
       PasusMetricCard(
         title: 'Updates',
-        value: state.cloudStatus.label,
-        detail: 'Scanning still runs locally when the malware engine is ready.',
+        value: state.updateStatus.label,
+        detail: _updateDetail(state),
         icon: Icons.system_update_alt_outlined,
       ),
       PasusMetricCard(
@@ -348,4 +356,18 @@ class HomeScreen extends ConsumerWidget {
     'aggressive' => 'Aggressive',
     _ => 'Off',
   };
+
+  String _updateDetail(PasusState state) {
+    final update = state.updateInfo;
+    if (state.updateStatus == UpdateStatus.updateAvailable && update != null) {
+      return 'Pasus ${update.latestVersion} is available. ${update.assetName ?? 'Open release'} to update.';
+    }
+    if (state.updateStatus == UpdateStatus.upToDate) {
+      return 'Pasus ${state.currentAppVersion} is installed.';
+    }
+    if (state.updateStatus == UpdateStatus.failed) {
+      return 'Could not check GitHub Releases. Scanning still works offline.';
+    }
+    return 'Pasus checks GitHub Releases and asks before opening an installer.';
+  }
 }

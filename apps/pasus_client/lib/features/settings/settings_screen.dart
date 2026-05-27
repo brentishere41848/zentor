@@ -5,6 +5,7 @@ import 'package:pasus_protocol/pasus_protocol.dart';
 
 import '../../app/app_state.dart';
 import '../../app/theme/pasus_colors.dart';
+import '../../core/updates/update_service.dart';
 import '../../shared/widgets/pasus_button.dart';
 import '../../shared/widgets/pasus_status_card.dart';
 import '../../shared/widgets/pasus_text_field.dart';
@@ -68,6 +69,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   secondary: true,
                   onPressed: controller.testCloudConnection,
                 ),
+              ],
+            ),
+          ],
+        ),
+        _Section(
+          title: 'Updates',
+          children: [
+            _ValueRow('Installed version', state.currentAppVersion),
+            _ValueRow('Status', state.updateStatus.label),
+            if (state.updateInfo != null) ...[
+              _ValueRow('Latest version', state.updateInfo!.latestVersion),
+              _ValueRow(
+                'Installer',
+                state.updateInfo!.assetName ?? 'GitHub release page',
+              ),
+            ],
+            if (state.updateError != null)
+              _ValueRow('Last check', state.updateError!),
+            const Text(
+              'Pasus checks GitHub Releases for a newer tagged build. It never installs silently; you choose whether to open the installer or release page.',
+              style: TextStyle(color: PasusColors.textSecondary, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                PasusButton(
+                  label: state.updateStatus == UpdateStatus.checking
+                      ? 'Checking'
+                      : 'Check for updates',
+                  icon: Icons.update_outlined,
+                  secondary: true,
+                  onPressed: state.updateStatus == UpdateStatus.checking
+                      ? null
+                      : controller.unawaitedCheckForUpdates,
+                ),
+                if (state.updateStatus == UpdateStatus.updateAvailable)
+                  PasusButton(
+                    label: 'Download Update',
+                    icon: Icons.system_update_alt_outlined,
+                    onPressed: controller.openUpdateDownload,
+                  ),
               ],
             ),
           ],
