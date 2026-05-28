@@ -1062,29 +1062,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pasus_api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "chrono",
- "dotenvy",
- "redis",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "thiserror",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "pem-rfc7468"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2572,6 +2549,29 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
+]
+
+[[package]]
+name = "zentor_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "chrono",
+ "dotenvy",
+ "redis",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

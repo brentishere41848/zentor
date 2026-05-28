@@ -1,6 +1,6 @@
-# Pasus Native Rule Format
+# Zentor Native Rule Format
 
-Native rules use the `.prule` extension and replace YARA as Pasus-owned deterministic rules.
+Native rules use the `.zrule` extension and replace YARA as Zentor-owned deterministic rules.
 
 Rules support:
 

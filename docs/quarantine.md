@@ -1,29 +1,29 @@
 # Quarantine
 
-When scan mode allows quarantine and Pasus finds a confirmed infected file, Pasus automatically quarantines it. Detect-only scans never quarantine or delete files.
+When scan mode allows quarantine and Zentor finds a confirmed infected file, Zentor automatically quarantines it. Detect-only scans never quarantine or delete files.
 
-The same quarantine store is used by manual scans and Pasus Guard. If the Guard stops a confirmed threat after launch, it moves the executable into this store and writes a JSON record with the action taken.
+The same quarantine store is used by manual scans and Zentor Guard. If the Guard stops a confirmed threat after launch, it moves the executable into this store and writes a JSON record with the action taken.
 
 ## Behavior
 
-Pasus:
+Zentor:
 
-- Moves the file into the Pasus quarantine folder.
-- Renames it to a safe random ID with a `.pasusq` extension.
+- Moves the file into the Zentor quarantine folder.
+- Renames it to a safe random ID with a `.zentorq` extension.
 - Removes executable permissions where supported.
 - Stores a JSON metadata record.
 - Shows a local event in the app.
-- Reports detection metadata to Pasus Cloud if the cloud is online.
+- Reports detection metadata to Zentor Cloud if the cloud is online.
 
-Pasus does not permanently delete infected files automatically.
+Zentor does not permanently delete infected files automatically.
 
 ## Storage
 
 Default quarantine locations:
 
-- Windows: `%ProgramData%/Pasus/Quarantine` or user app data fallback.
-- macOS: `~/Library/Application Support/Pasus/Quarantine`.
-- Linux: `~/.local/share/pasus/quarantine`.
+- Windows: `%ProgramData%/Zentor/Quarantine` or user app data fallback.
+- macOS: `~/Library/Application Support/Zentor/Quarantine`.
+- Linux: `~/.local/share/zentor/quarantine`.
 
 ## Metadata
 

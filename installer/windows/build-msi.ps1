@@ -128,33 +128,33 @@ function Get-FlutterBuildNumber([string]$Version) {
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$clientDir = Join-Path $root "apps\pasus_client"
+$clientDir = Join-Path $root "apps\zentor_client"
 $releaseDir = Join-Path $clientDir "build\windows\x64\runner\$Configuration"
-$localCoreExe = Join-Path $root "core\pasus_local_core\target\x86_64-pc-windows-msvc\release\pasus_local_core.exe"
-$localCoreExeGnu = Join-Path $root "core\pasus_local_core\target\x86_64-pc-windows-gnu\release\pasus_local_core.exe"
-$localCoreExeDefault = Join-Path $root "core\pasus_local_core\target\release\pasus_local_core.exe"
-$guardServiceExeDefault = Join-Path $root "core\pasus_guard_service\target\release\pasus_guard_service.exe"
+$localCoreExe = Join-Path $root "core\zentor_local_core\target\x86_64-pc-windows-msvc\release\zentor_local_core.exe"
+$localCoreExeGnu = Join-Path $root "core\zentor_local_core\target\x86_64-pc-windows-gnu\release\zentor_local_core.exe"
+$localCoreExeDefault = Join-Path $root "core\zentor_local_core\target\release\zentor_local_core.exe"
+$guardServiceExeDefault = Join-Path $root "core\zentor_guard_service\target\release\zentor_guard_service.exe"
 $distRoot = Join-Path $root "dist"
 $stageDir = Join-Path $distRoot "windows-msi\stage"
-$wxsPath = Join-Path $distRoot "windows-msi\Pasus.wxs"
-$bundleWxsPath = Join-Path $distRoot "windows-msi\Pasus.Bundle.wxs"
-$msiPath = Join-Path $distRoot "Pasus-$Version-x64.msi"
-$exeInstallerPath = Join-Path $distRoot "Pasus-$Version-x64-setup.exe"
+$wxsPath = Join-Path $distRoot "windows-msi\Zentor.wxs"
+$bundleWxsPath = Join-Path $distRoot "windows-msi\Zentor.Bundle.wxs"
+$msiPath = Join-Path $distRoot "Zentor-AntiVirus-$Version-x64.msi"
+$exeInstallerPath = Join-Path $distRoot "Zentor-AntiVirus-$Version-x64-setup.exe"
 $clamAvVersion = "1.5.2"
 $clamAvUrl = "https://github.com/Cisco-Talos/clamav/releases/download/clamav-$clamAvVersion/clamav-$clamAvVersion.win.x64.zip"
 $clamAvSha256 = "6F868ED7A7E5A15ACED82C53A4FA9F3F42FA9D7F7DE14A606BA8DB0756518EED"
 $clamAvZipPath = Join-Path $PSScriptRoot "cache\clamav-$clamAvVersion.win.x64.zip"
 $clamAvExtractDir = Join-Path $distRoot "windows-msi\clamav-extract"
 $modelSourceDir = Join-Path $root "assets\models"
-$nativeSourceDir = Join-Path $root "assets\pasus_native"
+$nativeSourceDir = Join-Path $root "assets\zentor_native"
 $yaraSourceDir = Join-Path $root "assets\yara"
 $testAssetsSourceDir = Join-Path $root "assets\test"
 $trustAssetsSourceDir = Join-Path $root "assets\trust"
 $threatAssetsSourceDir = Join-Path $root "assets\threats"
-$driverToolsSourceDir = Join-Path $root "core\pasus_windows_minifilter"
-$processGuardToolsSourceDir = Join-Path $root "core\pasus_windows_process_guard"
-$modelFile = Join-Path $modelSourceDir "pasus_static_malware_model.onnx"
-$modelMetadataFile = Join-Path $modelSourceDir "pasus_static_malware_model.metadata.json"
+$driverToolsSourceDir = Join-Path $root "core\zentor_windows_minifilter"
+$processGuardToolsSourceDir = Join-Path $root "core\zentor_windows_process_guard"
+$modelFile = Join-Path $modelSourceDir "zentor_static_malware_model.onnx"
+$modelMetadataFile = Join-Path $modelSourceDir "zentor_static_malware_model.metadata.json"
 
 Require-Command "dotnet" "Install the .NET SDK."
 
@@ -166,13 +166,13 @@ if (-not $SkipFlutterBuild) {
   Push-Location $clientDir
   try {
     $buildNumber = Get-FlutterBuildNumber $Version
-    Invoke-Checked { & $flutter build windows --release --build-name $Version --build-number $buildNumber "--dart-define=PASUS_APP_VERSION=$Version" } "Flutter Windows release build failed."
+    Invoke-Checked { & $flutter build windows --release --build-name $Version --build-number $buildNumber "--dart-define=ZENTOR_APP_VERSION=$Version" } "Flutter Windows release build failed."
   } finally {
     Pop-Location
   }
 }
 
-if (-not (Test-Path (Join-Path $releaseDir "Pasus.exe"))) {
+if (-not (Test-Path (Join-Path $releaseDir "Zentor.exe"))) {
   throw "Flutter release output was not found at $releaseDir"
 }
 
@@ -183,9 +183,9 @@ if (-not (Test-Path $localCoreExe) -and -not (Test-Path $localCoreExeDefault) -a
     $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
   }
   if ($cargo) {
-    Push-Location (Join-Path $root "core\pasus_local_core")
+    Push-Location (Join-Path $root "core\zentor_local_core")
     try {
-      Invoke-Checked { cargo build --release } "pasus_local_core release build failed."
+      Invoke-Checked { cargo build --release } "zentor_local_core release build failed."
     } finally {
       Pop-Location
     }
@@ -199,9 +199,9 @@ if (-not (Test-Path $guardServiceExeDefault)) {
     $cargo = Get-Command "cargo" -ErrorAction SilentlyContinue
   }
   if ($cargo) {
-    Push-Location (Join-Path $root "core\pasus_guard_service")
+    Push-Location (Join-Path $root "core\zentor_guard_service")
     try {
-      Invoke-Checked { cargo build --release } "pasus_guard_service release build failed."
+      Invoke-Checked { cargo build --release } "zentor_guard_service release build failed."
     } finally {
       Pop-Location
     }
@@ -212,7 +212,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $wxsPath) | Out-Null
 Copy-Tree $releaseDir $stageDir
 
 if (-not (Test-Path $modelFile) -or -not (Test-Path $modelMetadataFile)) {
-  throw "Pasus AI model assets are required: $modelFile and $modelMetadataFile"
+  throw "Zentor AI model assets are required: $modelFile and $modelMetadataFile"
 }
 $modelMetadata = Get-Content -Raw -LiteralPath $modelMetadataFile | ConvertFrom-Json
 if (-not $modelMetadata.production_ready -and -not $AllowDevelopmentModel) {
@@ -223,15 +223,15 @@ $releaseModelDir = Join-Path $releaseDir "assets\models"
 Copy-Tree $modelSourceDir $stageModelDir
 Copy-Tree $modelSourceDir $releaseModelDir
 
-if (-not (Test-Path (Join-Path $nativeSourceDir "signatures\pasus_core.psig")) -or -not (Test-Path (Join-Path $nativeSourceDir "rules\pasus_rules.prule")) -or -not (Test-Path (Join-Path $nativeSourceDir "ml\pasus_native_model.pmodel"))) {
-  throw "Pasus Native Engine assets are required under $nativeSourceDir"
+if (-not (Test-Path (Join-Path $nativeSourceDir "signatures\zentor_core.zsig")) -or -not (Test-Path (Join-Path $nativeSourceDir "rules\zentor_rules.zrule")) -or -not (Test-Path (Join-Path $nativeSourceDir "ml\zentor_native_model.zmodel"))) {
+  throw "Zentor Native Engine assets are required under $nativeSourceDir"
 }
-$stageNativeDir = Join-Path $stageDir "assets\pasus_native"
-$releaseNativeDir = Join-Path $releaseDir "assets\pasus_native"
+$stageNativeDir = Join-Path $stageDir "assets\zentor_native"
+$releaseNativeDir = Join-Path $releaseDir "assets\zentor_native"
 Copy-Tree $nativeSourceDir $stageNativeDir
 Copy-Tree $nativeSourceDir $releaseNativeDir
 
-if (Test-Path (Join-Path $yaraSourceDir "pasus_core_rules.yar")) {
+if (Test-Path (Join-Path $yaraSourceDir "zentor_core_rules.yar")) {
   $stageYaraDir = Join-Path $stageDir "assets\yara"
   $releaseYaraDir = Join-Path $releaseDir "assets\yara"
   Copy-Tree $yaraSourceDir $stageYaraDir
@@ -257,8 +257,8 @@ Copy-Tree $threatAssetsSourceDir $stageThreatsDir
 Copy-Tree $threatAssetsSourceDir $releaseThreatsDir
 
 foreach ($requiredDriverFile in @(
-  "driver\PasusAvFilter.vcxproj",
-  "driver\PasusAvFilter.inf",
+  "driver\ZentorAvFilter.vcxproj",
+  "driver\ZentorAvFilter.inf",
   "driver\Driver.c",
   "driver\Communication.c",
   "driver\Filter.c",
@@ -268,12 +268,12 @@ foreach ($requiredDriverFile in @(
 )) {
   $driverFilePath = Join-Path $driverToolsSourceDir $requiredDriverFile
   if (-not (Test-Path $driverFilePath)) {
-    throw "Pasus Windows driver development file is missing: $driverFilePath"
+    throw "Zentor Windows driver development file is missing: $driverFilePath"
   }
 }
-$stageDriverToolsDir = Join-Path $stageDir "driver-tools\pasus_windows_minifilter"
+$stageDriverToolsDir = Join-Path $stageDir "driver-tools\zentor_windows_minifilter"
 Copy-Tree $driverToolsSourceDir $stageDriverToolsDir
-$stageProcessGuardToolsDir = Join-Path $stageDir "driver-tools\pasus_windows_process_guard"
+$stageProcessGuardToolsDir = Join-Path $stageDir "driver-tools\zentor_windows_process_guard"
 Copy-Tree $processGuardToolsSourceDir $stageProcessGuardToolsDir
 
 $coreSource = $null
@@ -286,19 +286,19 @@ if (Test-Path $localCoreExe) {
 }
 
 if ($coreSource) {
-  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $stageDir "pasus_local_core.exe") -Force
-  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $releaseDir "pasus_local_core.exe") -Force
+  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $stageDir "zentor_local_core.exe") -Force
+  Copy-Item -LiteralPath $coreSource -Destination (Join-Path $releaseDir "zentor_local_core.exe") -Force
 } elseif ($RequireLocalCore) {
-  throw "pasus_local_core.exe was not found. Build it for Windows first or run without -RequireLocalCore."
+  throw "zentor_local_core.exe was not found. Build it for Windows first or run without -RequireLocalCore."
 } else {
-  Write-Warning "pasus_local_core.exe was not found. The MSI will install the app, but local malware scanning will show Engine Unavailable until the core is deployed."
+  Write-Warning "zentor_local_core.exe was not found. The MSI will install the app, but local malware scanning will show Engine Unavailable until the core is deployed."
 }
 
 if (Test-Path $guardServiceExeDefault) {
-  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $stageDir "pasus_guard_service.exe") -Force
-  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $releaseDir "pasus_guard_service.exe") -Force
+  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $stageDir "zentor_guard_service.exe") -Force
+  Copy-Item -LiteralPath $guardServiceExeDefault -Destination (Join-Path $releaseDir "zentor_guard_service.exe") -Force
 } else {
-  Write-Warning "pasus_guard_service.exe was not found. The MSI will not include the real-time Guard helper."
+  Write-Warning "zentor_guard_service.exe was not found. The MSI will not include the real-time Guard helper."
 }
 
 if ($IncludeClamAVCompatibility -and -not $SkipClamAV) {
@@ -307,7 +307,7 @@ if ($IncludeClamAVCompatibility -and -not $SkipClamAV) {
   Copy-ClamAVRuntime $clamAvZipPath $clamAvExtractDir (Join-Path $releaseDir "ClamAV")
   Write-Host "Bundled optional ClamAV compatibility runtime $clamAvVersion in the MSI."
 } else {
-  Write-Host "Skipping ClamAV compatibility runtime. Pasus Native Engine is the primary scanner."
+  Write-Host "Skipping ClamAV compatibility runtime. Zentor Native Engine is the primary scanner."
 }
 
 $runtimeDlls = @(
@@ -391,32 +391,32 @@ $upgradeCode = "35E0D125-9699-4CFB-8E93-588D0E83F517"
 $wxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package
-    Name="Pasus"
-    Manufacturer="Pasus"
+    Name="Zentor Anti-Virus"
+    Manufacturer="Zentor Security"
     Version="$Version"
     UpgradeCode="$upgradeCode"
     Scope="perMachine">
-    <MajorUpgrade DowngradeErrorMessage="A newer version of Pasus is already installed." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Zentor is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="Pasus" />
+      <Directory Id="INSTALLFOLDER" Name="Zentor" />
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="ApplicationProgramsFolder" Name="Pasus" />
+      <Directory Id="ApplicationProgramsFolder" Name="Zentor Anti-Virus" />
     </StandardDirectory>
 
 $directoryXml
 $componentsXml
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="StartMenuShortcut" Guid="*">
-        <Shortcut Id="PasusStartMenuShortcut" Name="Pasus" Target="[INSTALLFOLDER]Pasus.exe" WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="ZentorStartMenuShortcut" Name="Zentor Anti-Virus" Target="[INSTALLFOLDER]Zentor.exe" WorkingDirectory="INSTALLFOLDER" />
         <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\Pasus\Client" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKCU" Key="Software\Zentor\Client" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
-    <Feature Id="MainFeature" Title="Pasus" Level="1">
+    <Feature Id="MainFeature" Title="Zentor Anti-Virus" Level="1">
 $componentRefsXml
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
@@ -441,14 +441,14 @@ $bundleWxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
   <Bundle
-    Name="Pasus"
-    Manufacturer="Pasus"
+    Name="Zentor Anti-Virus"
+    Manufacturer="Zentor Security"
     Version="$Version"
     UpgradeCode="$bundleUpgradeCode">
     <BootstrapperApplication>
       <bal:WixStandardBootstrapperApplication
         Theme="hyperlinkLicense"
-        LicenseUrl="https://github.com/brentishere41848/pasus_anti-virus/blob/main/docs/privacy.md" />
+        LicenseUrl="https://github.com/brentishere41848/zentor_anti-virus/blob/main/docs/privacy.md" />
     </BootstrapperApplication>
     <Chain>
       <MsiPackage SourceFile="$(XmlEscape $msiPath)" Compressed="yes" />

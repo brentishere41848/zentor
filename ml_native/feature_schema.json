@@ -1,5 +1,5 @@
 {
-  "schema": "pne-features-v1",
+  "schema": "zne-features-v1",
   "features": [
     "file_size",
     "extension_executable",

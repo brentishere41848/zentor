@@ -13,7 +13,7 @@ pub async fn health(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     sqlx::query("select 1").execute(&state.db).await?;
     Ok(Json(json!({
         "status": "ok",
-        "service": "pasus-api",
+        "service": "zentor-api",
         "version": env!("CARGO_PKG_VERSION"),
     })))
 }
@@ -30,8 +30,8 @@ pub async fn create_project(
     let slug = request
         .slug
         .unwrap_or_else(|| name.to_lowercase().replace(' ', "-"));
-    let public_game_key = format!("pk_pasus_{}", Uuid::new_v4().simple());
-    let key_hash = hash_api_key(&public_game_key);
+    let public_client_key = format!("pk_zentor_{}", Uuid::new_v4().simple());
+    let key_hash = hash_api_key(&public_client_key);
     let mut tx = state.db.begin().await?;
     sqlx::query("insert into projects (id, name, slug) values ($1, $2, $3)")
         .bind(project_id)
@@ -42,7 +42,7 @@ pub async fn create_project(
     sqlx::query("insert into api_keys (id, project_id, name, key_hash) values ($1, $2, $3, $4)")
         .bind(Uuid::new_v4())
         .bind(project_id)
-        .bind("Default public game key")
+        .bind("Default public client key")
         .bind(key_hash)
         .execute(&mut *tx)
         .await?;
@@ -59,7 +59,7 @@ pub async fn create_project(
         project_id,
         name: name.to_string(),
         slug,
-        public_game_key,
+        public_client_key,
     }))
 }
 
@@ -73,24 +73,24 @@ pub async fn register_player(
     } else {
         auth.project_id
     };
-    let player_id = Uuid::new_v4();
+    let device_id = Uuid::new_v4();
     let row = sqlx::query_as::<_, (Uuid, Uuid, String, Option<String>)>(
-        "insert into players (id, project_id, external_player_id, display_name)
+        "insert into devices (id, project_id, external_device_id, display_name)
          values ($1, $2, $3, $4)
-         on conflict (project_id, external_player_id)
+         on conflict (project_id, external_device_id)
          do update set display_name = excluded.display_name
-         returning id, project_id, external_player_id, display_name",
+         returning id, project_id, external_device_id, display_name",
     )
-    .bind(player_id)
+    .bind(device_id)
     .bind(project_id)
-    .bind(request.external_player_id)
+    .bind(request.external_device_id)
     .bind(request.display_name)
     .fetch_one(&state.db)
     .await?;
     Ok(Json(PlayerResponse {
-        player_id: row.0,
+        device_id: row.0,
         project_id: row.1,
-        external_player_id: row.2,
+        external_device_id: row.2,
         display_name: row.3,
     }))
 }
@@ -110,16 +110,16 @@ pub async fn create_session(
     }
     let started_at = Utc::now();
     sqlx::query(
-        "insert into sessions
-         (id, project_id, player_id, platform, game_version, build_hash, device_fingerprint_hash, nonce, started_at, expires_at, status)
+        "insert into protection_runs
+         (id, project_id, device_id, platform, client_version, file_hash, device_fingerprint_hash, nonce, started_at, expires_at, status)
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active')",
     )
     .bind(session_id)
     .bind(project_id)
-    .bind(request.player_id)
+    .bind(request.device_id)
     .bind(request.platform)
-    .bind(request.game_version)
-    .bind(request.build_hash)
+    .bind(request.client_version)
+    .bind(request.file_hash)
     .bind(request.device_fingerprint_hash)
     .bind(request.nonce)
     .bind(started_at)
@@ -129,7 +129,7 @@ pub async fn create_session(
     audit(
         &state,
         Some(project_id),
-        request.player_id,
+        request.device_id,
         "protection_session_created",
         json!({"session_id": session_id}),
     )
@@ -171,7 +171,7 @@ pub async fn heartbeat(
     }))
     .execute(&state.db)
     .await?;
-    sqlx::query("update sessions set last_heartbeat_at = now() where id = $1")
+    sqlx::query("update protection_runs set last_heartbeat_at = now() where id = $1")
         .bind(session_id)
         .execute(&state.db)
         .await?;
@@ -222,7 +222,7 @@ pub async fn end_session(
     if session_project != auth.project_id {
         return Err(ApiError::Unauthorized);
     }
-    sqlx::query("update sessions set status = 'ended', ended_at = now() where id = $1")
+    sqlx::query("update protection_runs set status = 'ended', ended_at = now() where id = $1")
         .bind(session_id)
         .execute(&state.db)
         .await?;
@@ -240,14 +240,14 @@ pub async fn end_session(
 pub async fn player_risk(
     State(state): State<AppState>,
     auth: ApiAuth,
-    Path(player_id): Path<Uuid>,
+    Path(device_id): Path<Uuid>,
 ) -> ApiResult<Json<RiskResponse>> {
     let row = sqlx::query_as::<_, (Option<i32>, Option<String>, Option<Value>)>(
         "select score, severity, reasons from risk_scores
-         where project_id = $1 and player_id = $2 order by calculated_at desc limit 1",
+         where project_id = $1 and device_id = $2 order by calculated_at desc limit 1",
     )
     .bind(auth.project_id)
-    .bind(player_id)
+    .bind(device_id)
     .fetch_optional(&state.db)
     .await?;
     let (score, severity, reasons) = match row {
@@ -261,7 +261,7 @@ pub async fn player_risk(
         None => (0, "info".to_string(), Vec::new()),
     };
     Ok(Json(RiskResponse {
-        player_id,
+        device_id,
         score,
         severity,
         reasons,
@@ -286,12 +286,12 @@ pub async fn create_ban(
     }
     let ban_id = Uuid::new_v4();
     sqlx::query(
-        "insert into bans (id, project_id, player_id, status, reason)
+        "insert into bans (id, project_id, device_id, status, reason)
          values ($1,$2,$3,$4,$5)",
     )
     .bind(ban_id)
     .bind(auth.project_id)
-    .bind(request.player_id)
+    .bind(request.device_id)
     .bind(request.status)
     .bind(request.reason)
     .execute(&state.db)
@@ -299,7 +299,7 @@ pub async fn create_ban(
     audit(
         &state,
         Some(auth.project_id),
-        Some(request.player_id),
+        Some(request.device_id),
         "ban_status_changed",
         json!({"ban_id": ban_id}),
     )
@@ -392,7 +392,7 @@ pub async fn audit_logs(State(state): State<AppState>, auth: ApiAuth) -> ApiResu
 }
 
 async fn session_project(state: &AppState, session_id: Uuid) -> ApiResult<Uuid> {
-    sqlx::query_as::<_, (Uuid,)>("select project_id from sessions where id = $1")
+    sqlx::query_as::<_, (Uuid,)>("select project_id from protection_runs where id = $1")
         .bind(session_id)
         .fetch_optional(&state.db)
         .await?
@@ -403,17 +403,17 @@ async fn session_project(state: &AppState, session_id: Uuid) -> ApiResult<Uuid> 
 async fn audit(
     state: &AppState,
     project_id: Option<Uuid>,
-    player_id: Option<Uuid>,
+    device_id: Option<Uuid>,
     action: &str,
     metadata: Value,
 ) -> ApiResult<()> {
     sqlx::query(
-        "insert into audit_logs (id, project_id, player_id, actor_type, action, metadata)
+        "insert into audit_logs (id, project_id, device_id, actor_type, action, metadata)
          values ($1,$2,$3,'system',$4,$5)",
     )
     .bind(Uuid::new_v4())
     .bind(project_id)
-    .bind(player_id)
+    .bind(device_id)
     .bind(action)
     .bind(metadata)
     .execute(&state.db)

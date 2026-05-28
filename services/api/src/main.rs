@@ -29,7 +29,7 @@ pub struct AppState {
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive("pasus_api=info".parse()?))
+        .with_env_filter(EnvFilter::from_default_env().add_directive("zentor_api=info".parse()?))
         .init();
 
     let config = ApiConfig::from_env()?;
@@ -38,14 +38,14 @@ async fn main() -> anyhow::Result<()> {
         .connect(&config.database_url)
         .await?;
     run_migrations(&db).await?;
-    seed_dev_project(&db, &config.dev_project_id, &config.dev_public_game_key).await?;
+    seed_dev_project(&db, &config.dev_project_id, &config.dev_public_client_key).await?;
     let redis = redis::Client::open(config.redis_url.clone())
         .ok()
         .map(Arc::new);
     let state = AppState { db, redis };
     let app = router(state);
     let listener = TcpListener::bind(config.bind_addr).await?;
-    tracing::info!("Pasus API listening on {}", config.bind_addr);
+    tracing::info!("Zentor API listening on {}", config.bind_addr);
     serve(listener, app).await?;
     Ok(())
 }
@@ -54,18 +54,18 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/v1/health", get(routes::health))
         .route("/v1/projects", post(routes::create_project))
-        .route("/v1/players", post(routes::register_player))
-        .route("/v1/sessions", post(routes::create_session))
+        .route("/v1/devices", post(routes::register_player))
+        .route("/v1/protection_runs", post(routes::create_session))
         .route(
-            "/v1/sessions/:session_id/heartbeat",
+            "/v1/protection_runs/:session_id/heartbeat",
             post(routes::heartbeat),
         )
         .route(
-            "/v1/sessions/:session_id/events",
+            "/v1/protection_runs/:session_id/events",
             post(routes::ingest_events),
         )
-        .route("/v1/sessions/:session_id/end", post(routes::end_session))
-        .route("/v1/players/:player_id/risk", get(routes::player_risk))
+        .route("/v1/protection_runs/:session_id/end", post(routes::end_session))
+        .route("/v1/devices/:device_id/risk", get(routes::player_risk))
         .route("/v1/bans", post(routes::create_ban))
         .route("/v1/detections", post(routes::report_detection))
         .route("/v1/quarantine", post(routes::upload_quarantine_metadata))
@@ -108,7 +108,7 @@ async fn seed_dev_project(db: &PgPool, project_slug: &str, public_key: &str) -> 
     let key_hash = hash_api_key(public_key);
     sqlx::query(
         "insert into projects (id, name, slug)
-         values ($1, 'Pasus Local Dev', $2)
+         values ($1, 'Zentor Local Dev', $2)
          on conflict (slug) do nothing",
     )
     .bind(project_id)

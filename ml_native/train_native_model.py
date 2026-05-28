@@ -14,7 +14,7 @@ def load_jsonl(path: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train a conservative Pasus Native .pmodel from feature JSONL.")
+    parser = argparse.ArgumentParser(description="Train a conservative Zentor Native .zmodel from feature JSONL.")
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -36,10 +36,10 @@ def main():
         weights[name] = max(-4.0, min(4.0, (pos_avg - neg_avg) * 2.0))
 
     model = {
-        "model_name": "Pasus Native Candidate Model",
+        "model_name": "Zentor Native Candidate Model",
         "model_version": "0.1.0-candidate",
-        "model_format_version": "pmodel-v1",
-        "feature_schema_version": "pne-features-v1",
+        "model_format_version": "zmodel-v1",
+        "feature_schema_version": "zne-features-v1",
         "production_ready": False,
         "precision": 0.0,
         "recall": 0.0,

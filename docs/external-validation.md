@@ -1,19 +1,19 @@
 # External Validation
 
-Pasus uses safe validation inputs only.
+Zentor uses safe validation inputs only.
 
 Supported checks:
 
 - EICAR safe antivirus test file.
 - AMTSO-style security feature checks where they use safe test content.
-- Pasus harmless known-bad hash fixture.
-- Pasus benign ransomware simulator in a temporary test directory only.
+- Zentor harmless known-bad hash fixture.
+- Zentor benign ransomware simulator in a temporary test directory only.
 
 Do not add real malware samples to this repository.
 
 Validation reports should record:
 
-- Pasus version.
+- Zentor version.
 - Protection mode.
 - Driver installed/running state.
 - Guard service state.

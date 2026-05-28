@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create minimal safe feature JSONL rows for Pasus Native ML development.")
+    parser = argparse.ArgumentParser(description="Create minimal safe feature JSONL rows for Zentor Native ML development.")
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     rows = [

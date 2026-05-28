@@ -60,22 +60,22 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Restore Flutter dependencies
-        working-directory: apps/pasus_client
+        working-directory: apps/zentor_client
         run: flutter pub get
 
       - name: Restore WiX tool
         run: dotnet tool restore
 
       - name: Build Flutter Windows app
-        working-directory: apps/pasus_client
-        run: flutter build windows --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.build_number }}" --dart-define=PASUS_APP_VERSION="${{ steps.version.outputs.version }}"
+        working-directory: apps/zentor_client
+        run: flutter build windows --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.build_number }}" --dart-define=ZENTOR_APP_VERSION="${{ steps.version.outputs.version }}"
 
       - name: Build local scan core
-        working-directory: core/pasus_local_core
+        working-directory: core/zentor_local_core
         run: cargo build --release
 
       - name: Build guard service
-        working-directory: core/pasus_guard_service
+        working-directory: core/zentor_guard_service
         run: cargo build --release
 
       - name: Package Windows installers
@@ -91,7 +91,7 @@ jobs:
               $scriptArgs.AllowDevelopmentModel = $true
             }
           } else {
-            $metadata = Get-Content -Raw -LiteralPath "assets\models\pasus_static_malware_model.metadata.json" | ConvertFrom-Json
+            $metadata = Get-Content -Raw -LiteralPath "assets\models\zentor_static_malware_model.metadata.json" | ConvertFrom-Json
             if (-not $metadata.production_ready) {
               $scriptArgs.AllowDevelopmentModel = $true
             }
@@ -101,34 +101,34 @@ jobs:
           } catch {
             $message = $_.Exception.Message
             $message = $message.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
-            Write-Host "::error title=Pasus installer packaging failed::$message"
+            Write-Host "::error title=Zentor installer packaging failed::$message"
             throw
           }
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pasus-windows-installers-${{ steps.version.outputs.version }}
+          name: zentor-windows-installers-${{ steps.version.outputs.version }}
           path: |
-            dist/Pasus-${{ steps.version.outputs.version }}-x64.msi
-            dist/Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
+            dist/Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
+            dist/Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe
           if-no-files-found: error
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Pasus ${{ steps.version.outputs.version }}
+          name: Zentor ${{ steps.version.outputs.version }}
           prerelease: true
           fail_on_unmatched_files: true
           body: |
-            Windows installer release for Pasus.
+            Windows installer release for Zentor.
 
             Assets:
-            - Pasus-${{ steps.version.outputs.version }}-x64.msi
-            - Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
+            - Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
+            - Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe
 
-            The current bundled AI model may be marked as a development model in its metadata. Pasus must not claim production AI protection unless `production_ready=true`.
+            The current bundled AI model may be marked as a development model in its metadata. Zentor must not claim production AI protection unless `production_ready=true`.
           files: |
-            dist/Pasus-${{ steps.version.outputs.version }}-x64.msi
-            dist/Pasus-${{ steps.version.outputs.version }}-x64-setup.exe
+            dist/Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
+            dist/Zentor-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe

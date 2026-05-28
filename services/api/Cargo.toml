@@ -1,5 +1,5 @@
 [package]
-name = "pasus_api"
+name = "zentor_api"
 version = "0.1.0"
 edition = "2021"
 

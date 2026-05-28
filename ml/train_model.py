@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Train a conservative offline Pasus static malware classifier.
+"""Train a conservative offline Zentor static malware classifier.
 
-This script is a developer pipeline. The production Pasus app never retrains
+This script is a developer pipeline. The production Zentor app never retrains
 itself silently from one user's labels.
 """
 

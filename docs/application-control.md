@@ -28,8 +28,8 @@ Policy rules:
 
 - Known bad hashes, EICAR/test signatures, confirmed native signatures, and high-confidence native rules are block eligible.
 - Known-good hashes, exact user approvals, and trusted signed publishers are allow eligible.
-- Normal `.exe` files, developer tools, VPN installers, CLI tools, and game launchers are not malware simply because they are unknown or unsigned.
+- Normal `.exe` files, developer tools, VPN installers, CLI tools, and consumer launchers are not malware simply because they are unknown or unsigned.
 - Lockdown may block unknown apps as unknown, not as confirmed threats.
-- Folder/root allowlisting is restricted. Pasus must not allowlist `C:\`, `C:\Windows`, `C:\Program Files`, `/`, `/System`, `/usr`, `/bin`, `/sbin`, or `/etc`.
+- Folder/root allowlisting is restricted. Zentor must not allowlist `C:\`, `C:\Windows`, `C:\Program Files`, `/`, `/System`, `/usr`, `/bin`, `/sbin`, or `/etc`.
 
 The known-good database in v0.1.13 is intentionally small and development-oriented. It is not a global reputation database.

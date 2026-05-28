@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: pasus
-      POSTGRES_PASSWORD: pasus
-      POSTGRES_DB: pasus
+      POSTGRES_USER: zentor
+      POSTGRES_PASSWORD: zentor
+      POSTGRES_DB: zentor
     ports:
       - "15432:5432"
     volumes:
-      - pasus_postgres:/var/lib/postgresql/data
+      - zentor_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pasus -d pasus"]
+      test: ["CMD-SHELL", "pg_isready -U zentor -d zentor"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -30,12 +30,12 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     environment:
-      DATABASE_URL: postgres://pasus:pasus@postgres:5432/pasus
+      DATABASE_URL: postgres://zentor:zentor@postgres:5432/zentor
       REDIS_URL: redis://redis:6379
-      PASUS_API_BIND_ADDR: 0.0.0.0:8000
-      PASUS_DEV_PROJECT_ID: pasus-default
-      PASUS_DEV_PUBLIC_GAME_KEY: pasus-public-client
-      RUST_LOG: pasus_api=info,tower_http=info
+      ZENTOR_API_BIND_ADDR: 0.0.0.0:8000
+      ZENTOR_DEV_PROJECT_ID: zentor-default
+      ZENTOR_DEV_PUBLIC_CLIENT_KEY: zentor-public-client
+      RUST_LOG: zentor_api=info,tower_http=info
     ports:
       - "8000:8000"
     depends_on:
@@ -45,4 +45,4 @@ services:
         condition: service_healthy
 
 volumes:
-  pasus_postgres:
+  zentor_postgres:

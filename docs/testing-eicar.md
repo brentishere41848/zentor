@@ -1,8 +1,8 @@
 # Testing With EICAR
 
-Pasus uses EICAR for safe antivirus test coverage.
+Zentor uses EICAR for safe antivirus test coverage.
 
-The EICAR test file is not real malware. Pasus treats it as a confirmed test signature so scanner, Guard, quarantine, and release gates can be tested without real malware samples.
+The EICAR test file is not real malware. Zentor treats it as a confirmed test signature so scanner, Guard, quarantine, and release gates can be tested without real malware samples.
 
 Expected behavior:
 
@@ -14,7 +14,7 @@ Expected behavior:
 Driver validation command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\windows\pasus-protection-selftest.ps1 -BuildDriver -InstallDriver
+powershell -ExecutionPolicy Bypass -File tools\windows\zentor-protection-selftest.ps1 -BuildDriver -InstallDriver
 ```
 
-Pasus must never include real malware samples in this repository.
+Zentor must never include real malware samples in this repository.

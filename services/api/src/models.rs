@@ -14,31 +14,31 @@ pub struct ProjectResponse {
     pub project_id: Uuid,
     pub name: String,
     pub slug: String,
-    pub public_game_key: String,
+    pub public_client_key: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterPlayerRequest {
     pub project_id: Uuid,
-    pub external_player_id: String,
+    pub external_device_id: String,
     pub display_name: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PlayerResponse {
-    pub player_id: Uuid,
+    pub device_id: Uuid,
     pub project_id: Uuid,
-    pub external_player_id: String,
+    pub external_device_id: String,
     pub display_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSessionRequest {
     pub project_id: Option<Uuid>,
-    pub player_id: Option<Uuid>,
+    pub device_id: Option<Uuid>,
     pub platform: String,
-    pub game_version: Option<String>,
-    pub build_hash: Option<String>,
+    pub client_version: Option<String>,
+    pub file_hash: Option<String>,
     pub device_fingerprint_hash: Option<String>,
     pub nonce: String,
     pub expires_at: DateTime<Utc>,
@@ -92,14 +92,14 @@ pub struct QuarantineMetadataRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateBanRequest {
-    pub player_id: Uuid,
+    pub device_id: Uuid,
     pub status: String,
     pub reason: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct RiskResponse {
-    pub player_id: Uuid,
+    pub device_id: Uuid,
     pub score: i32,
     pub severity: String,
     pub reasons: Vec<String>,

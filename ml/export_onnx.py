@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the conservative Pasus static-feature model to ONNX.
+"""Export the conservative Zentor static-feature model to ONNX.
 
 This creates a real ONNX graph. Without a vetted production dataset the
 metadata is marked production_ready=false.
@@ -42,7 +42,7 @@ def export(output_dir: Path, production_ready: bool = False) -> None:
             helper.make_node("Gemm", ["features", "W_cat", "B_cat"], ["category_logits"]),
             helper.make_node("Softmax", ["category_logits"], ["category_scores"], axis=1),
         ],
-        "pasus_static_malware_model",
+        "zentor_static_malware_model",
         [helper.make_tensor_value_info("features", TensorProto.FLOAT, [1, feature_count])],
         [
             helper.make_tensor_value_info("malware_probability", TensorProto.FLOAT, [1, 1]),
@@ -55,18 +55,18 @@ def export(output_dir: Path, production_ready: bool = False) -> None:
             numpy_helper.from_array(b_cat, "B_cat"),
         ],
     )
-    model = helper.make_model(graph, producer_name="pasus-export-onnx", opset_imports=[helper.make_operatorsetid("", 13)])
+    model = helper.make_model(graph, producer_name="zentor-export-onnx", opset_imports=[helper.make_operatorsetid("", 13)])
     model.ir_version = 7
     onnx.checker.check_model(model)
-    onnx.save(model, output_dir / "pasus_static_malware_model.onnx")
+    onnx.save(model, output_dir / "zentor_static_malware_model.onnx")
     metadata = {
-        "model_name": "pasus_static_malware_model",
+        "model_name": "zentor_static_malware_model",
         "model_version": "0.1.0-dev" if not production_ready else "1.0.0",
         "model_type": "static_feature_logistic_onnx",
         "feature_schema_version": "1.0.0",
         "trained_at": "2026-05-26T00:00:00Z",
         "production_ready": production_ready,
-        "training_dataset_name": "pasus-development-fixtures" if not production_ready else "pasus-production-corpus",
+        "training_dataset_name": "zentor-development-fixtures" if not production_ready else "zentor-production-corpus",
         "training_sample_count": 12 if not production_ready else 0,
         "validation_sample_count": 6 if not production_ready else 0,
         "false_positive_rate": None if not production_ready else 0.0,
@@ -76,7 +76,7 @@ def export(output_dir: Path, production_ready: bool = False) -> None:
         "supported_categories": ["trojan", "ransomware", "spyware", "adware", "worm", "keylogger", "miner", "potentially_unwanted_app", "unknown"],
         "limitations": ["Development model; not trained on a production malware corpus."] if not production_ready else [],
     }
-    (output_dir / "pasus_static_malware_model.metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    (output_dir / "zentor_static_malware_model.metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
 
 def main() -> None:

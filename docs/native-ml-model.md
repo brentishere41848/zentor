@@ -1,10 +1,10 @@
-# Pasus Native ML Model
+# Zentor Native ML Model
 
-PNE uses a Pasus-owned `.pmodel` format for local ML inference. The runtime is pure Rust and deterministic.
+ZNE uses a Zentor-owned `.zmodel` format for local ML inference. The runtime is pure Rust and deterministic.
 
 The checked-in model is:
 
-- `assets/pasus_native/ml/pasus_native_model.pmodel`
+- `assets/zentor_native/ml/zentor_native_model.zmodel`
 - version `0.1.0-dev`
 - `production_ready: false`
 

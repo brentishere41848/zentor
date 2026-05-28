@@ -11,7 +11,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace/services/api
-COPY --from=builder /workspace/services/api/target/release/pasus_api /usr/local/bin/pasus_api
+COPY --from=builder /workspace/services/api/target/release/zentor_api /usr/local/bin/zentor_api
 COPY --from=builder /workspace/infra /workspace/infra
 EXPOSE 8080
-CMD ["pasus_api"]
+CMD ["zentor_api"]

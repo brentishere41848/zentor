@@ -1,20 +1,20 @@
-# Pasus Privacy
+# Zentor Privacy
 
-Pasus v1 is visible and user-controlled.
+Zentor v1 is visible and user-controlled.
 
-Pasus may:
+Zentor may:
 
 - Run Quick Scan against common high-risk locations.
 - Run Full Scan against accessible local drives or home filesystem areas.
 - Run Custom Scan against a user-selected file or folder.
-- Calculate hashes for scanned files and selected game executables or manifests.
-- Use Pasus Cloud for optional status and detection reporting when available.
+- Calculate hashes for scanned files and selected files or application manifests.
+- Use Zentor Cloud for optional status and detection reporting when available.
 - Automatically quarantine confirmed infected files when the selected scan mode allows it.
 - Store local security events visibly in the app.
 - Store explicit false-positive or malicious feedback labels locally when the user submits them.
 - Run local AI/static feature extraction offline when a real local model is installed.
 
-Pasus does not:
+Zentor does not:
 
 - Hide scanning activity from the user.
 - Permanently delete files automatically.

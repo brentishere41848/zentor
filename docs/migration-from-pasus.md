@@ -1,0 +1,17 @@
+# Migration From Pasus
+
+Zentor was previously developed under the internal project name Pasus.
+
+The active product name is now Zentor Anti-Virus, from Zentor Security. Active UI, services, installers, native engine assets, IPC names, release artifacts, and documentation should use Zentor naming.
+
+The local core keeps a safe migration path for existing preview users:
+
+- Detect the old Pasus local data directory.
+- Copy config, quarantine metadata, allowlist data, logs, and scan history into the Zentor data directory.
+- Preserve quarantine metadata and original paths.
+- Keep old `.pasusq` quarantine files readable.
+- Write new quarantine files as `.zentorq`.
+- Do not delete old data automatically.
+- Do not restore or re-enable quarantined files during migration.
+
+Migration writes an internal event after a successful copy: “Migrated local data from Pasus to Zentor”.

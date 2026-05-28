@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Pasus feature JSONL rows from already-extracted metadata.
+"""Build Zentor feature JSONL rows from already-extracted metadata.
 
 This script does not execute files, detonate samples, download malware, or
 upload user data. It validates feature rows for the offline training pipeline.

@@ -1,6 +1,6 @@
 # False Positives
 
-Pasus must minimize false positives.
+Zentor must minimize false positives.
 
 The following are not malware by themselves:
 
@@ -10,7 +10,7 @@ The following are not malware by themselves:
 - VPN installer.
 - CLI tool.
 - Developer tool.
-- Game launcher.
+- Consumer launcher.
 
 Balanced mode must not auto-quarantine benign fixtures.
 

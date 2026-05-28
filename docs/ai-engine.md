@@ -1,11 +1,11 @@
 # AI Engine
 
-Pasus local AI runs offline through the Rust local core and packaged ONNX assets.
+Zentor local AI runs offline through the Rust local core and packaged ONNX assets.
 
 Release gates:
 
-- `assets/models/pasus_static_malware_model.onnx` must exist.
-- `assets/models/pasus_static_malware_model.metadata.json` must exist.
+- `assets/models/zentor_static_malware_model.onnx` must exist.
+- `assets/models/zentor_static_malware_model.metadata.json` must exist.
 - Metadata must parse and thresholds must exist.
 - UI may say `Local AI Active` only when the model loads and inference self-test passes.
 

@@ -21,7 +21,7 @@ def score(model, features):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate a Pasus Native .pmodel on feature fixtures.")
+    parser = argparse.ArgumentParser(description="Evaluate a Zentor Native .zmodel on feature fixtures.")
     parser.add_argument("--model", required=True)
     parser.add_argument("--fixtures", required=True)
     parser.add_argument("--max-fpr", type=float, default=0.005)

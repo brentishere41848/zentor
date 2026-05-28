@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate a Pasus offline model export.
+"""Evaluate a Zentor offline model export.
 
 This placeholder enforces that model releases include measured false-positive
 rates before deployment.
