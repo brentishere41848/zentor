@@ -68,6 +68,20 @@ function Test-PathExcluded {
     return $false
 }
 
+function Test-AllowedHistoricalMatch {
+    param(
+        [string]$Line,
+        [string]$Term
+    )
+
+    $legacyRepo = "github.com/brentishere41848/" + $legacy.ToLowerInvariant() + "_anti-virus.git"
+    if ($Term -eq $legacy.ToLowerInvariant() -and $Line.Contains($legacyRepo)) {
+        return $true
+    }
+
+    return $false
+}
+
 function Get-RelativePathCompat {
     param(
         [string]$BasePath,
@@ -158,7 +172,10 @@ function Search-WithPowerShell {
                 try {
                     $fileMatches = Select-String -LiteralPath $file.FullName -SimpleMatch -Pattern $Term -ErrorAction Stop
                     foreach ($match in $fileMatches) {
-                        $results += "${relative}:$($match.LineNumber):$($match.Line)"
+                        $formattedMatch = "${relative}:$($match.LineNumber):$($match.Line)"
+                        if (-not (Test-AllowedHistoricalMatch -Line $formattedMatch -Term $Term)) {
+                            $results += $formattedMatch
+                        }
                     }
                 } catch {
                     # Ignore unreadable or binary-like files; active text assets are covered by normal scans.
@@ -184,6 +201,9 @@ foreach ($term in $terms) {
             $args += $glob
         }
         $matches = & rg @args 2>$null
+        if ($LASTEXITCODE -eq 0 -and $matches) {
+            $matches = @($matches | Where-Object { -not (Test-AllowedHistoricalMatch -Line $_ -Term $term) })
+        }
         if ($LASTEXITCODE -eq 0 -and $matches) {
             $failures += "Forbidden active branding term [$term]:"
             $failures += $matches

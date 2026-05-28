@@ -27,6 +27,15 @@ docs/
   api-config.md
 ```
 
+## Get The Code
+
+```powershell
+git clone https://github.com/brentishere41848/pasus_anti-virus.git Zentor
+cd Zentor
+```
+
+The GitHub repository URL still contains the old repository name, but the active product is Zentor Anti-Virus.
+
 ## Run The Flutter App
 
 ```powershell
@@ -212,17 +221,26 @@ Platform builds require the normal Flutter toolchain for that platform. iOS and 
 
 ## Windows Installers
 
+For normal testing, installing the MSI or EXE is easier than running the app from source. Use the installer from GitHub Releases when available, or build one locally with:
+
 ```powershell
 cd C:\Users\Brent\CodexProjects\Zentor
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.1.0 -RequireLocalCore
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.0 -RequireLocalCore -AllowDevelopmentModel
 ```
 
 The installers are written to:
 
 ```text
-dist\Zentor-AntiVirus-0.1.0-x64.msi
-dist\Zentor-AntiVirus-0.1.0-x64-setup.exe
+dist\Zentor-AntiVirus-0.2.0-x64.msi
+dist\Zentor-AntiVirus-0.2.0-x64-setup.exe
 ```
+
+Install either file:
+
+- `Zentor-AntiVirus-0.2.0-x64-setup.exe` is the easiest option for most users.
+- `Zentor-AntiVirus-0.2.0-x64.msi` is better for clean installer testing and enterprise-style deployment checks.
+
+The MSI/EXE installs the app, local core, guard service binary, Zentor Native Engine assets, app assets, and docs. It does not replace the Windows driver-development VM workflow. Driver build/install/self-test still requires WDK or EWDK, administrator rights, test-signing in a disposable VM, and the driver validation scripts.
 
 The installer stages the Flutter Windows release app, `zentor_local_core.exe`, `zentor_guard_service.exe`, Zentor Native Engine assets, app assets, bundled Flutter/plugin DLLs, Visual C++ runtime DLLs available on the build machine, and local privacy/security docs. Compatibility engines are not required for normal scanning. Zentor does not install hidden services or stealth persistence.
 
