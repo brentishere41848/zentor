@@ -24,7 +24,10 @@ pub fn extract_features(
     FeatureVector {
         file_size: (analysis.file_size as f64).log10().max(0.0),
         extension_executable: f64::from(executable_ext),
-        file_type_executable: f64::from(matches!(analysis.file_type, FileType::Pe | FileType::Elf | FileType::MachO)),
+        file_type_executable: f64::from(matches!(
+            analysis.file_type,
+            FileType::Pe | FileType::Elf | FileType::MachO
+        )),
         location_risk: location::location_risk(path) as f64 / 20.0,
         filename_risk: filename::filename_risk(path) as f64 / 25.0,
         double_extension: f64::from(filename::filename_risk(path) >= 25),

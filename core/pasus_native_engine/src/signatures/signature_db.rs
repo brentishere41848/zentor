@@ -31,7 +31,8 @@ impl SignatureDb {
                 min_file_size: None,
                 max_file_size: None,
                 required_context: vec![],
-                false_positive_notes: "EICAR is a safe industry test string, not real malware.".to_string(),
+                false_positive_notes: "EICAR is a safe industry test string, not real malware."
+                    .to_string(),
                 action_policy: "quarantine_if_policy_allows".to_string(),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -46,6 +47,8 @@ impl SignatureDb {
                 .with_context(|| format!("failed to read signature pack {}", path.display()))?;
             let pack: super::pack_format::SignaturePack = serde_json::from_str(&text)
                 .with_context(|| format!("failed to parse signature pack {}", path.display()))?;
+            let canonical = super::signature_compiler::canonical_pack_bytes(&pack)?;
+            super::pack_verifier::verify_pack(&pack, &canonical)?;
             super::signature_compiler::validate_signatures(&pack.signatures)?;
             db.signatures.extend(pack.signatures);
         }

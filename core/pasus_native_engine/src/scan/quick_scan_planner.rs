@@ -6,7 +6,16 @@ pub fn quick_scan_roots() -> Vec<PathBuf> {
         let profile = PathBuf::from(profile);
         roots.push(profile.join("Downloads"));
         roots.push(profile.join("Desktop"));
-        roots.push(profile.join("AppData").join("Roaming").join("Microsoft").join("Windows").join("Start Menu").join("Programs").join("Startup"));
+        roots.push(
+            profile
+                .join("AppData")
+                .join("Roaming")
+                .join("Microsoft")
+                .join("Windows")
+                .join("Start Menu")
+                .join("Programs")
+                .join("Startup"),
+        );
     }
     if let Some(temp) = std::env::var_os("TEMP") {
         roots.push(PathBuf::from(temp));

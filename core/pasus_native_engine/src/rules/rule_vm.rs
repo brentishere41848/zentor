@@ -26,17 +26,19 @@ pub fn evaluate_rule(
                 !encoded.is_empty() && bytes.windows(encoded.len()).any(|window| window == encoded)
             }
             RuleCondition::EntropyGreaterThan { value } => analysis.entropy_max > *value,
-            RuleCondition::SuspiciousImportsAtLeast { value } => analysis
-                .pe
-                .as_ref()
-                .map(|pe| {
-                    pe.suspicious_imports.process_injection
-                        + pe.suspicious_imports.credential_access
-                        + pe.suspicious_imports.persistence
-                        + pe.suspicious_imports.network
-                })
-                .unwrap_or_default()
-                >= *value,
+            RuleCondition::SuspiciousImportsAtLeast { value } => {
+                analysis
+                    .pe
+                    .as_ref()
+                    .map(|pe| {
+                        pe.suspicious_imports.process_injection
+                            + pe.suspicious_imports.credential_access
+                            + pe.suspicious_imports.persistence
+                            + pe.suspicious_imports.network
+                    })
+                    .unwrap_or_default()
+                    >= *value
+            }
             RuleCondition::EncodedCommand => analysis
                 .script
                 .as_ref()
@@ -52,7 +54,9 @@ pub fn evaluate_rule(
                 .as_ref()
                 .map(|archive| archive.contains_executable)
                 .unwrap_or(false),
-            RuleCondition::PathContains { value } => path_text.contains(&value.to_ascii_lowercase()),
+            RuleCondition::PathContains { value } => {
+                path_text.contains(&value.to_ascii_lowercase())
+            }
         })
         .count();
     if matches < rule.min_condition_matches {

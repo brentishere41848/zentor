@@ -34,6 +34,15 @@ if ($metadata.production_ready -eq $false) {
   Write-Host "Native ML is development-only; AI-only auto-quarantine must remain disabled."
 }
 
+$signatureMetadata = Get-Content "assets/pasus_native/signatures/pasus_core.metadata.json" -Raw | ConvertFrom-Json
+if (-not $signatureMetadata.pack_sha256) {
+  Fail "Native signature metadata is missing pack_sha256."
+}
+if ($signatureMetadata.signature_count -lt 1) {
+  Fail "Native signature pack must contain at least one compiled signature."
+}
+
+cargo build --manifest-path "core/pasus_native_engine/Cargo.toml" --bin pasus-signature-compiler
 cargo test --manifest-path "core/pasus_native_engine/Cargo.toml"
 cargo test --manifest-path "core/pasus_local_core/Cargo.toml"
 cargo test --manifest-path "core/pasus_guard_service/Cargo.toml"
@@ -46,7 +55,8 @@ if ($LASTEXITCODE -eq 0) {
 
 $status = @{
   native_engine = "pass"
-  signatures = (Get-Content "assets/pasus_native/signatures/pasus_core.metadata.json" -Raw | ConvertFrom-Json).signature_count
+  signatures = $signatureMetadata.signature_count
+  signature_pack_sha256 = $signatureMetadata.pack_sha256
   rules = (Get-Content "assets/pasus_native/rules/pasus_rules.metadata.json" -Raw | ConvertFrom-Json).rule_count
   compatibility_engines_enabled_by_default = $false
 }

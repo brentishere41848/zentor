@@ -17,7 +17,11 @@ impl KnownBadStore {
         }
         let raw: TrustHashes = serde_json::from_str(&fs::read_to_string(path)?)?;
         Ok(Self {
-            hashes: raw.hashes.into_iter().map(|h| h.to_ascii_lowercase()).collect(),
+            hashes: raw
+                .hashes
+                .into_iter()
+                .map(|h| h.to_ascii_lowercase())
+                .collect(),
         })
     }
 

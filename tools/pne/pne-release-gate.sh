@@ -7,14 +7,22 @@ cd "$REPO_ROOT"
 for path in \
   core/pasus_native_engine/Cargo.toml \
   assets/pasus_native/signatures/pasus_core.psig \
+  assets/pasus_native/signatures/pasus_core.metadata.json \
   assets/pasus_native/rules/pasus_rules.prule \
   assets/pasus_native/ml/pasus_native_model.pmodel \
+  assets/pasus_native/ml/pasus_native_model.metadata.json \
   assets/pasus_native/trust/pasus_known_good.ptrust \
   assets/pasus_native/trust/pasus_known_bad_test.ptrust
 do
   test -f "$path" || { echo "Missing required PNE artifact: $path" >&2; exit 1; }
 done
 
+grep -q '"pack_sha256"' assets/pasus_native/signatures/pasus_core.metadata.json || {
+  echo "Native signature metadata is missing pack_sha256." >&2
+  exit 1
+}
+
+cargo build --manifest-path core/pasus_native_engine/Cargo.toml --bin pasus-signature-compiler
 cargo test --manifest-path core/pasus_native_engine/Cargo.toml
 cargo test --manifest-path core/pasus_local_core/Cargo.toml
 cargo test --manifest-path core/pasus_guard_service/Cargo.toml

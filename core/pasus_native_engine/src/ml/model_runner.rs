@@ -44,7 +44,9 @@ impl NativeModelRunner {
     }
 
     pub fn model_version(&self) -> Option<&str> {
-        self.model.as_ref().map(|model| model.model_version.as_str())
+        self.model
+            .as_ref()
+            .map(|model| model.model_version.as_str())
     }
 
     pub fn production_ready(&self) -> bool {
@@ -59,9 +61,12 @@ impl NativeModelRunner {
         let score = model
             .weights
             .iter()
-            .fold(model.bias, |acc, (name, weight)| acc + features.get(name) * weight);
+            .fold(model.bias, |acc, (name, weight)| {
+                acc + features.get(name) * weight
+            });
         let probability = 1.0 / (1.0 + (-score).exp());
-        let verdict = if probability >= model.thresholds.confirmed_malware && model.production_ready {
+        let verdict = if probability >= model.thresholds.confirmed_malware && model.production_ready
+        {
             Verdict::ConfirmedMalware
         } else if probability >= model.thresholds.probable_malware {
             Verdict::ProbableMalware
@@ -70,15 +75,16 @@ impl NativeModelRunner {
         } else {
             Verdict::LikelyClean
         };
-        let confidence = if probability >= model.thresholds.confirmed_malware && model.production_ready {
-            Confidence::Confirmed
-        } else if probability >= model.thresholds.probable_malware {
-            Confidence::High
-        } else if probability >= model.thresholds.suspicious {
-            Confidence::Medium
-        } else {
-            Confidence::Low
-        };
+        let confidence =
+            if probability >= model.thresholds.confirmed_malware && model.production_ready {
+                Confidence::Confirmed
+            } else if probability >= model.thresholds.probable_malware {
+                Confidence::High
+            } else if probability >= model.thresholds.suspicious {
+                Confidence::Medium
+            } else {
+                Confidence::Low
+            };
         let mut contributions = model
             .weights
             .iter()

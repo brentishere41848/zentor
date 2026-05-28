@@ -13,10 +13,15 @@ pub fn validate_rules(rules: &[NativeRule]) -> Result<()> {
         {
             bail!("rule {} is missing required metadata", rule.id);
         }
-        if matches!(rule.verdict, Verdict::ConfirmedMalware | Verdict::TestThreat)
-            && rule.confidence != Confidence::Confirmed
+        if matches!(
+            rule.verdict,
+            Verdict::ConfirmedMalware | Verdict::TestThreat
+        ) && rule.confidence != Confidence::Confirmed
         {
-            bail!("rule {} cannot confirm malware without confirmed confidence", rule.id);
+            bail!(
+                "rule {} cannot confirm malware without confirmed confidence",
+                rule.id
+            );
         }
         if rule.conditions.len() < 2 && rule.confidence != Confidence::Low {
             bail!("broad rule {} must be low confidence", rule.id);

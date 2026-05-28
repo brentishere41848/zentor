@@ -6,8 +6,9 @@ Windows v1 behavior is best-effort post-launch protection:
 
 - Receives or observes process start events.
 - Provides a `watch_processes` command that monitors newly observed processes in user mode.
-- Checks known malicious hashes and confirmed local signatures.
-- Uses bundled/local ClamAV when available for confirmed signature checks.
+- Checks known malicious hashes and Pasus Native Engine verdicts.
+- Uses PNE native signatures, native rules, native ML, and native risk fusion as the default decision source.
+- Keeps ClamAV/YARA only as optional compatibility features (`compat_clamav`, `compat_yara`) and does not require them.
 - Stops confirmed threat processes where the OS allows it.
 - Moves confirmed threat executables to local quarantine.
 - Writes visible events for the UI.

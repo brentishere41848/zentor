@@ -3,6 +3,7 @@ mod tests {
     use std::fs;
 
     use crate::analyzers::{analyze_path, FileType};
+    use crate::behavior::{BehaviorDecision, FileActivityEvent};
     use crate::config::EngineConfig;
     use crate::engine::{sha256_bytes, PasusNativeEngine};
     use crate::heuristics;
@@ -10,9 +11,10 @@ mod tests {
     use crate::rules::RuleDb;
     use crate::scan::ScanActionMode;
     use crate::signatures::eicar_signature::EICAR_ASCII;
-    use crate::signatures::SignatureDb;
+    use crate::signatures::{NativeSignature, SignatureDb, SignatureType};
     use crate::trust::Allowlist;
-    use crate::verdict::Verdict;
+    use crate::verdict::{Confidence, ThreatCategory, Verdict};
+    use chrono::Utc;
 
     fn test_engine() -> (tempfile::TempDir, PasusNativeEngine) {
         let dir = tempfile::tempdir().unwrap();
@@ -37,7 +39,11 @@ mod tests {
         )
         .unwrap();
         let known_bad_hash = sha256_bytes(b"harmless-known-bad-fixture");
-        fs::write(assets.join("trust/pasus_known_good.ptrust"), r#"{"hashes":[]}"#).unwrap();
+        fs::write(
+            assets.join("trust/pasus_known_good.ptrust"),
+            r#"{"hashes":[]}"#,
+        )
+        .unwrap();
         fs::write(
             assets.join("trust/pasus_known_bad_test.ptrust"),
             format!(r#"{{"hashes":["{known_bad_hash}"]}}"#),
@@ -98,7 +104,11 @@ mod tests {
         let (dir, mut engine) = test_engine();
         let file = dir.path().join("eicar-memory.txt");
         let verdict = engine
-            .scan_bytes_for_test(file.clone(), EICAR_ASCII.as_bytes(), ScanActionMode::DetectOnly)
+            .scan_bytes_for_test(
+                file.clone(),
+                EICAR_ASCII.as_bytes(),
+                ScanActionMode::DetectOnly,
+            )
             .unwrap();
         assert!(verdict.quarantine_record.is_none());
     }
@@ -129,8 +139,11 @@ mod tests {
     #[test]
     fn rule_pack_loads() {
         let (dir, _) = test_engine();
-        let db = RuleDb::load_pack(&dir.path().join("assets/pasus_native/rules/pasus_rules.prule"))
-            .unwrap();
+        let db = RuleDb::load_pack(
+            &dir.path()
+                .join("assets/pasus_native/rules/pasus_rules.prule"),
+        )
+        .unwrap();
         assert_eq!(db.count(), 1);
     }
 
@@ -180,5 +193,137 @@ mod tests {
         let report = engine.engine_self_test().unwrap();
         assert!(report.eicar_detected);
         assert_eq!(report.overall_result, "pass");
+    }
+
+    #[test]
+    fn compiler_rejects_broad_confirmed_string_signature() {
+        let signature = NativeSignature {
+            id: "PNE-BROAD-BAD".to_string(),
+            name: "Broad bad signature".to_string(),
+            version: "1".to_string(),
+            category: ThreatCategory::Unknown,
+            confidence: Confidence::Confirmed,
+            severity: "high".to_string(),
+            signature_type: SignatureType::AsciiString,
+            pattern: "cmd".to_string(),
+            mask: None,
+            offset: None,
+            file_types: vec!["text".to_string()],
+            min_file_size: None,
+            max_file_size: None,
+            required_context: vec![],
+            false_positive_notes: "This intentionally broad fixture must be rejected.".to_string(),
+            action_policy: "quarantine_if_policy_allows".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        assert!(crate::signatures::signature_compiler::validate_signatures(&[signature]).is_err());
+    }
+
+    #[test]
+    fn compiler_outputs_pack_metadata_and_hash() {
+        let signature = NativeSignature {
+            id: "PNE-HASH-TEST".to_string(),
+            name: "Hash test signature".to_string(),
+            version: "1".to_string(),
+            category: ThreatCategory::TestThreat,
+            confidence: Confidence::Confirmed,
+            severity: "test".to_string(),
+            signature_type: SignatureType::ExactHash,
+            pattern: sha256_bytes(b"fixture").to_string(),
+            mask: None,
+            offset: None,
+            file_types: vec!["*".to_string()],
+            min_file_size: None,
+            max_file_size: None,
+            required_context: vec![],
+            false_positive_notes: "Safe compiler test fixture.".to_string(),
+            action_policy: "quarantine_if_policy_allows".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let (pack, metadata) = crate::signatures::signature_compiler::compile_pack(
+            vec![signature],
+            "9.9.9".to_string(),
+        )
+        .unwrap();
+        assert_eq!(pack.signatures.len(), 1);
+        assert_eq!(metadata.signature_count, 1);
+        assert!(pack.pack_sha256.is_some());
+        assert_eq!(
+            pack.pack_sha256.as_deref(),
+            Some(metadata.pack_sha256.as_str())
+        );
+    }
+
+    #[test]
+    fn byte_pattern_offset_and_file_type_filter_are_enforced() {
+        let signature = NativeSignature {
+            id: "PNE-OFFSET-TEST".to_string(),
+            name: "Offset byte pattern".to_string(),
+            version: "1".to_string(),
+            category: ThreatCategory::Unknown,
+            confidence: Confidence::Low,
+            severity: "low".to_string(),
+            signature_type: SignatureType::BytePattern,
+            pattern: "DE AD BE EF".to_string(),
+            mask: None,
+            offset: Some(4),
+            file_types: vec!["text".to_string()],
+            min_file_size: None,
+            max_file_size: None,
+            required_context: vec![],
+            false_positive_notes: "Offset matcher test fixture.".to_string(),
+            action_policy: "review_only".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let bytes = b"xxxx\xde\xad\xbe\xef";
+        let analysis = analyze_path(std::path::Path::new("sample.txt"), bytes).unwrap();
+        assert!(crate::signatures::signature_matcher::matches_signature(
+            &signature,
+            std::path::Path::new("sample.txt"),
+            &sha256_bytes(bytes),
+            bytes,
+            &analysis
+        )
+        .is_some());
+
+        let pe_analysis = analyze_path(
+            std::path::Path::new("sample.exe"),
+            b"MZxxxx\xde\xad\xbe\xef",
+        )
+        .unwrap();
+        assert!(crate::signatures::signature_matcher::matches_signature(
+            &signature,
+            std::path::Path::new("sample.exe"),
+            &sha256_bytes(b"MZxxxx\xde\xad\xbe\xef"),
+            b"MZxxxx\xde\xad\xbe\xef",
+            &pe_analysis
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn ransomware_activity_window_accumulates_process_behavior() {
+        let (dir, mut engine) = test_engine();
+        let process = dir.path().join("unknown.exe");
+        fs::write(&process, b"harmless simulator").unwrap();
+        let mut decision = BehaviorDecision::Allow;
+        for index in 0..5 {
+            decision = engine
+                .analyze_file_activity(FileActivityEvent {
+                    process_id: 777,
+                    process_path: process.clone(),
+                    affected_paths: vec![dir.path().join(format!("doc-{index}.txt"))],
+                    files_modified_count: 6,
+                    files_renamed_count: 4,
+                    entropy_increase_count: 3,
+                    ransom_note_created: index == 4,
+                    backup_tamper_attempt: false,
+                })
+                .unwrap();
+        }
+        assert_eq!(decision, BehaviorDecision::StopProcess);
     }
 }

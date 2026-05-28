@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::analyzers::analyze_path;
-use crate::behavior::{BehaviorDecision, FileActivityEvent, ProcessStartEvent, RansomwareGuard};
+use crate::behavior::{
+    BehaviorDecision, FileActivityEvent, ProcessStartEvent, RansomwareActivityWindow,
+};
 use crate::config::EngineConfig;
 use crate::heuristics;
 use crate::ml::{feature_extractor, NativeModelRunner};
@@ -68,6 +70,7 @@ pub struct PasusNativeEngine {
     known_good: KnownGoodStore,
     known_bad: KnownBadStore,
     allowlist: Allowlist,
+    ransomware_window: RansomwareActivityWindow,
     scan_results: BTreeMap<ScanJobId, ScanSummary>,
 }
 
@@ -90,6 +93,7 @@ impl PasusNativeEngine {
             known_good,
             known_bad,
             allowlist: Allowlist::default(),
+            ransomware_window: RansomwareActivityWindow::default(),
             scan_results: BTreeMap::new(),
         })
     }
@@ -149,7 +153,7 @@ impl PasusNativeEngine {
         }
         evidence.extend(
             self.signatures
-            .match_bytes(&path, &sha256, &bytes, &analysis)
+                .match_bytes(&path, &sha256, &bytes, &analysis)
                 .into_iter()
                 .map(|matched| Evidence {
                     id: matched.signature_id,
@@ -174,7 +178,10 @@ impl PasusNativeEngine {
         evidence.extend(heuristics::score_file(&path, &analysis));
         let features = feature_extractor::extract_features(&path, &analysis, known_good, known_bad);
         if let Some(ml) = self.ml.analyze_features(&features) {
-            if matches!(ml.verdict, Verdict::Suspicious | Verdict::ProbableMalware | Verdict::ConfirmedMalware) {
+            if matches!(
+                ml.verdict,
+                Verdict::Suspicious | Verdict::ProbableMalware | Verdict::ConfirmedMalware
+            ) {
                 evidence.push(Evidence {
                     id: "native_ml".to_string(),
                     title: "Pasus Native ML review".to_string(),
@@ -194,19 +201,22 @@ impl PasusNativeEngine {
             }
         }
         let final_verdict = RiskFusion::fuse(evidence, known_good, allowlisted);
-        let quarantine_record = if should_auto_quarantine(mode, final_verdict.verdict, final_verdict.confidence)
-            && !allowlisted
-            && allow_quarantine
-        {
-            Some(QuarantineStore::new(self.config.quarantine_dir.clone()).quarantine_file(
-                &path,
-                &sha256,
-                &final_verdict.user_visible_explanation,
-                false,
-            )?)
-        } else {
-            None
-        };
+        let quarantine_record =
+            if should_auto_quarantine(mode, final_verdict.verdict, final_verdict.confidence)
+                && !allowlisted
+                && allow_quarantine
+            {
+                Some(
+                    QuarantineStore::new(self.config.quarantine_dir.clone()).quarantine_file(
+                        &path,
+                        &sha256,
+                        &final_verdict.user_visible_explanation,
+                        false,
+                    )?,
+                )
+            } else {
+                None
+            };
         Ok(FileScanVerdict {
             path,
             sha256,
@@ -222,7 +232,11 @@ impl PasusNativeEngine {
     }
 
     pub fn start_quick_scan(&mut self, mode: ScanActionMode) -> Result<ScanJobId> {
-        self.scan_roots(quick_scan_planner::quick_scan_roots(), ScanMode::Quick, mode)
+        self.scan_roots(
+            quick_scan_planner::quick_scan_roots(),
+            ScanMode::Quick,
+            mode,
+        )
     }
 
     pub fn start_full_scan(&mut self, mode: ScanActionMode) -> Result<ScanJobId> {
@@ -261,8 +275,8 @@ impl PasusNativeEngine {
         })
     }
 
-    pub fn analyze_file_activity(&self, event: FileActivityEvent) -> Result<BehaviorDecision> {
-        Ok(RansomwareGuard::analyze(&event).0)
+    pub fn analyze_file_activity(&mut self, event: FileActivityEvent) -> Result<BehaviorDecision> {
+        Ok(self.ransomware_window.observe(event).0)
     }
 
     pub fn quarantine(&self, path: PathBuf, reason: &str) -> Result<QuarantineRecord> {
@@ -328,7 +342,14 @@ impl PasusNativeEngine {
         let mut folders_scanned = 0;
         let mut bytes_estimated = 0;
         for root in roots {
-            let walk = file_walker::collect_files(&root, if scan_mode == ScanMode::Quick { Some(3) } else { None });
+            let walk = file_walker::collect_files(
+                &root,
+                if scan_mode == ScanMode::Quick {
+                    Some(3)
+                } else {
+                    None
+                },
+            );
             skipped_files += walk.skipped_files;
             folders_scanned += walk.folders_scanned;
             bytes_estimated += walk.bytes_estimated;

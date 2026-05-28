@@ -230,18 +230,8 @@ fn handle_process_started(
 ) -> anyhow::Result<GuardEvent> {
     let hash = sha256_file(process_path)?;
     let native_match = native_threat_match(process_path).unwrap_or(None);
-    let local_match = if native_match.is_none() {
-        local_signature_match(process_path)?
-    } else {
-        None
-    };
-    let yara_match = if local_match.is_none() {
-        yara_rule_match(process_path).unwrap_or(None)
-    } else {
-        None
-    };
-    let clamav_signature = if local_match.is_none() && yara_match.is_none() {
-        clamav_signature_match(process_path).unwrap_or(None)
+    let compat_match = if native_match.is_none() {
+        compat_threat_match(process_path)?
     } else {
         None
     };
@@ -253,23 +243,8 @@ fn handle_process_started(
         })
     } else if let Some(native_match) = native_match {
         Some(native_match)
-    } else if let Some(signature) = local_match {
-        Some(signature)
-    } else if let Some(yara_match) = yara_match {
-        if matches!(
-            yara_match.confidence,
-            LocalThreatConfidence::Confirmed | LocalThreatConfidence::High
-        ) {
-            Some(yara_match)
-        } else {
-            None
-        }
     } else {
-        clamav_signature.map(|signature| LocalThreatMatch {
-            reason: format!("ClamAV signature: {signature}"),
-            engine: "clamav".to_string(),
-            confidence: LocalThreatConfidence::Confirmed,
-        })
+        compat_match
     };
 
     let Some(threat_match) = confirmed_match else {
@@ -295,8 +270,9 @@ fn handle_process_started(
         ok: true,
         action: "stoppedAndQuarantined".to_string(),
         message: format!(
-            "Pasus stopped the process and moved the file to quarantine. Reason: {}.",
-            threat_match.reason
+            "Pasus stopped the process and moved the file to quarantine. Reason: {}. Confidence: {:?}.",
+            threat_match.reason,
+            threat_match.confidence
         ),
         process_id,
         process_path: Some(process_path.display().to_string()),
@@ -340,29 +316,17 @@ fn watch_processes(
                     hash
                 }
             };
-            let local_match = local_signature_match(&process.path)
-                .ok()
-                .flatten()
-                .or_else(|| {
-                    yara_rule_match(&process.path).ok().flatten().filter(|m| {
-                        matches!(
-                            m.confidence,
-                            LocalThreatConfidence::Confirmed | LocalThreatConfidence::High
-                        )
-                    })
-                })
-                .or_else(|| {
-                    clamav_signature_match(&process.path)
-                        .ok()
-                        .flatten()
-                        .map(|signature| LocalThreatMatch {
-                            reason: format!("ClamAV signature: {signature}"),
-                            engine: "clamav".to_string(),
-                            confidence: LocalThreatConfidence::Confirmed,
-                        })
-                });
+            let native_match = native_threat_match(&process.path).ok().flatten();
+            let compat_match = if native_match.is_none() {
+                compat_threat_match(&process.path).ok().flatten()
+            } else {
+                None
+            };
 
-            if known_malicious_hashes.contains(&hash) || local_match.is_some() {
+            if known_malicious_hashes.contains(&hash)
+                || native_match.is_some()
+                || compat_match.is_some()
+            {
                 return handle_process_started(
                     Some(process.process_id),
                     &process.path,
@@ -628,13 +592,9 @@ fn normalize_hash(value: String) -> String {
         .to_lowercase()
 }
 
-fn local_signature_match(path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> {
-    let bytes = fs::read(path)?;
-    Ok(local_signature_match_bytes(&bytes))
-}
-
 fn native_threat_match(path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> {
-    let mut engine = PasusNativeEngine::initialize(EngineConfig::from_repo_root(native_asset_root()))?;
+    let mut engine =
+        PasusNativeEngine::initialize(EngineConfig::from_repo_root(native_asset_root()))?;
     let verdict = engine.scan_file(path.to_path_buf(), PneScanActionMode::DetectOnly)?;
     let confidence = match verdict.final_verdict.confidence {
         pasus_native_engine::Confidence::Confirmed => LocalThreatConfidence::Confirmed,
@@ -679,27 +639,31 @@ fn native_asset_root() -> PathBuf {
     current
 }
 
-fn local_signature_match_bytes(bytes: &[u8]) -> Option<LocalThreatMatch> {
-    if bytes
-        .windows(EICAR_TEST_SIGNATURE.len())
-        .any(|window| window == EICAR_TEST_SIGNATURE.as_bytes())
-        || bytes
-            .windows(PASUS_SAFE_EICAR_SIMULATOR.len())
-            .any(|window| window == PASUS_SAFE_EICAR_SIMULATOR.as_bytes())
+fn compat_threat_match(_path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> {
+    #[cfg(any(feature = "compat_yara", feature = "compat_clamav"))]
     {
-        return Some(LocalThreatMatch {
-            reason: "EICAR test signature".to_string(),
-            engine: "pasus-local-signature".to_string(),
-            confidence: LocalThreatConfidence::Confirmed,
-        });
+        #[cfg(feature = "compat_yara")]
+        if let Some(yara_match) = yara_rule_match(_path)? {
+            if matches!(
+                yara_match.confidence,
+                LocalThreatConfidence::Confirmed | LocalThreatConfidence::High
+            ) {
+                return Ok(Some(yara_match));
+            }
+        }
+        #[cfg(feature = "compat_clamav")]
+        if let Some(signature) = clamav_signature_match(_path)? {
+            return Ok(Some(LocalThreatMatch {
+                reason: format!("ClamAV compatibility signature: {signature}"),
+                engine: "compat-clamav".to_string(),
+                confidence: LocalThreatConfidence::Confirmed,
+            }));
+        }
     }
-    None
+    Ok(None)
 }
 
-const EICAR_TEST_SIGNATURE: &str =
-    "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
-const PASUS_SAFE_EICAR_SIMULATOR: &str = "PASUS-SAFE-EICAR-SIMULATOR-FILE";
-
+#[cfg(feature = "compat_clamav")]
 fn clamav_signature_match(path: &Path) -> anyhow::Result<Option<String>> {
     let Some(clamscan) = find_clamscan() else {
         return Ok(None);
@@ -723,6 +687,7 @@ fn clamav_signature_match(path: &Path) -> anyhow::Result<Option<String>> {
         .filter(|value| !value.is_empty()))
 }
 
+#[cfg(feature = "compat_yara")]
 fn yara_rule_match(path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> {
     let rules_path = default_yara_rules_path();
     if !rules_path.is_file() {
@@ -785,6 +750,7 @@ fn yara_rule_match(path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> {
     Ok(best)
 }
 
+#[cfg(feature = "compat_yara")]
 fn default_yara_rules_path() -> PathBuf {
     let mut roots = Vec::new();
     if let Ok(current_exe) = std::env::current_exe() {
@@ -814,12 +780,14 @@ fn default_yara_rules_path() -> PathBuf {
     PathBuf::from("assets/yara/pasus_core_rules.yar")
 }
 
+#[cfg(feature = "compat_yara")]
 fn metadata_value(line: &str, key: &str) -> Option<String> {
     let prefix = format!("{key} =");
     line.strip_prefix(&prefix)
         .and_then(|value| quoted_value(value.trim()))
 }
 
+#[cfg(feature = "compat_yara")]
 fn quoted_value(value: &str) -> Option<String> {
     let start = value.find('"')?;
     let rest = &value[start + 1..];
@@ -827,6 +795,7 @@ fn quoted_value(value: &str) -> Option<String> {
     Some(rest[..end].to_string())
 }
 
+#[cfg(feature = "compat_yara")]
 fn confidence_from_yara(value: &str) -> LocalThreatConfidence {
     match value {
         "confirmed" => LocalThreatConfidence::Confirmed,
@@ -836,6 +805,7 @@ fn confidence_from_yara(value: &str) -> LocalThreatConfidence {
     }
 }
 
+#[cfg(feature = "compat_yara")]
 fn confidence_rank(confidence: &LocalThreatConfidence) -> u8 {
     match confidence {
         LocalThreatConfidence::Confirmed => 4,
@@ -845,6 +815,7 @@ fn confidence_rank(confidence: &LocalThreatConfidence) -> u8 {
     }
 }
 
+#[cfg(feature = "compat_clamav")]
 fn find_clamscan() -> Option<PathBuf> {
     if let Ok(configured) = std::env::var("PASUS_CLAMAV_CLAMSCAN") {
         let path = PathBuf::from(configured);
@@ -955,21 +926,6 @@ mod tests {
     }
 
     #[test]
-    fn eicar_signature_bytes_are_detected_as_confirmed_test_threat() {
-        assert_eq!(
-            local_signature_match_bytes(EICAR_TEST_SIGNATURE.as_bytes())
-                .map(|matched| matched.reason),
-            Some("EICAR test signature".to_string())
-        );
-        assert_eq!(
-            local_signature_match_bytes(PASUS_SAFE_EICAR_SIMULATOR.as_bytes())
-                .map(|matched| matched.reason),
-            Some("EICAR test signature".to_string())
-        );
-        assert!(local_signature_match_bytes(b"normal installer").is_none());
-    }
-
-    #[test]
     fn watch_processes_completes_without_fake_detection() {
         let result = watch_processes(&HashSet::new(), 100, Some(1)).unwrap();
         assert_eq!(result.action, "watchCompleted");
@@ -977,13 +933,10 @@ mod tests {
     }
 
     #[test]
-    fn medium_yara_match_is_review_only_and_not_stopped() {
+    fn medium_native_script_match_is_review_only_and_not_stopped() {
         let dir = tempdir().unwrap();
         let file = dir.path().join("script.ps1");
         fs::write(&file, "[Convert]::FromBase64String('AAAA')").unwrap();
-
-        let yara = yara_rule_match(&file).unwrap().unwrap();
-        assert_eq!(yara.confidence, LocalThreatConfidence::Medium);
 
         let result = handle_process_started(Some(4242), &file, &HashSet::new()).unwrap();
         assert_eq!(result.action, "monitored");

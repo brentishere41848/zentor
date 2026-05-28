@@ -3,6 +3,10 @@ name = "pasus_native_engine"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "pasus-signature-compiler"
+path = "src/bin/pasus-signature-compiler.rs"
+
 [dependencies]
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }

@@ -10,7 +10,8 @@ pub fn score_file(path: &Path, analysis: &StaticAnalysis) -> Vec<Evidence> {
         evidence.push(Evidence {
             id: "filename_risk".to_string(),
             title: "Suspicious filename pattern".to_string(),
-            detail: "The filename uses a deceptive extension or high-risk naming pattern.".to_string(),
+            detail: "The filename uses a deceptive extension or high-risk naming pattern."
+                .to_string(),
             weight: name_score,
             source: EvidenceSource::NativeHeuristic,
         });
@@ -18,7 +19,9 @@ pub fn score_file(path: &Path, analysis: &StaticAnalysis) -> Vec<Evidence> {
         evidence.push(Evidence {
             id: "filename_observation".to_string(),
             title: "Filename observation".to_string(),
-            detail: "The filename has a weak risk indicator; this is not enough to call it malware.".to_string(),
+            detail:
+                "The filename has a weak risk indicator; this is not enough to call it malware."
+                    .to_string(),
             weight: name_score.min(8),
             source: EvidenceSource::NativeHeuristic,
         });
@@ -65,7 +68,8 @@ pub fn score_file(path: &Path, analysis: &StaticAnalysis) -> Vec<Evidence> {
             evidence.push(Evidence {
                 id: "security_tamper_script".to_string(),
                 title: "Security tamper indicator".to_string(),
-                detail: "The script references backup or security setting tamper commands.".to_string(),
+                detail: "The script references backup or security setting tamper commands."
+                    .to_string(),
                 weight: 35,
                 source: EvidenceSource::NativeHeuristic,
             });
@@ -100,7 +104,8 @@ pub fn score_file(path: &Path, analysis: &StaticAnalysis) -> Vec<Evidence> {
             evidence.push(Evidence {
                 id: "archive_suspicious_executable".to_string(),
                 title: "Suspicious executable inside archive".to_string(),
-                detail: "The archive contains executable entries with suspicious names.".to_string(),
+                detail: "The archive contains executable entries with suspicious names."
+                    .to_string(),
                 weight: 25,
                 source: EvidenceSource::NativeHeuristic,
             });

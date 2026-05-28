@@ -18,3 +18,5 @@ Response:
 - Start recovery from Recovery Vault or OS snapshots when available.
 
 Pasus must not claim files are recovered unless restore actually succeeds.
+
+The Pasus Native Engine keeps a short per-process activity window. Multiple smaller file-change events can combine into one ransomware decision, which helps avoid overreacting to one normal write while still catching rapid modification patterns.

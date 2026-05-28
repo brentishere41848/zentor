@@ -1,7 +1,11 @@
 use super::{Confidence, Verdict};
 use crate::scan::ScanActionMode;
 
-pub fn should_auto_quarantine(mode: ScanActionMode, verdict: Verdict, confidence: Confidence) -> bool {
+pub fn should_auto_quarantine(
+    mode: ScanActionMode,
+    verdict: Verdict,
+    confidence: Confidence,
+) -> bool {
     match mode {
         ScanActionMode::DetectOnly | ScanActionMode::LockdownReview => false,
         ScanActionMode::AutoQuarantineConfirmed => {
@@ -10,8 +14,10 @@ pub fn should_auto_quarantine(mode: ScanActionMode, verdict: Verdict, confidence
         }
         ScanActionMode::AutoQuarantineHighConfidence => matches!(
             (verdict, confidence),
-            (Verdict::ConfirmedMalware | Verdict::TestThreat, Confidence::Confirmed)
-                | (Verdict::ProbableMalware, Confidence::High)
+            (
+                Verdict::ConfirmedMalware | Verdict::TestThreat,
+                Confidence::Confirmed
+            ) | (Verdict::ProbableMalware, Confidence::High)
         ),
     }
 }

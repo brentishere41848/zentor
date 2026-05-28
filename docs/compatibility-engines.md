@@ -13,3 +13,10 @@ ClamAV and YARA are no longer primary detection layers. Existing code may remain
 - real-time protection decisions
 
 The UI must present compatibility engines only in advanced settings if they are enabled explicitly.
+
+Guard Service compatibility code is compiled behind explicit Cargo features:
+
+- `compat_clamav`
+- `compat_yara`
+
+Default Guard builds do not call these engines in the process-start or driver-verdict path. PNE native verdicts are evaluated first and are sufficient for EICAR/test-threat decisions.

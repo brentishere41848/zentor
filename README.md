@@ -146,6 +146,18 @@ Desktop scanning uses Pasus Native Engine (PNE) as the primary engine:
 - Pure Rust native ML runtime using `assets/pasus_native/ml/pasus_native_model.pmodel`.
 - No cloud, ClamAV, or YARA dependency for Quick Scan, Full Scan, Custom Scan, EICAR detection, or quarantine.
 
+Native signature packs are compiled with:
+
+```powershell
+cargo run --manifest-path core\pasus_native_engine\Cargo.toml --bin pasus-signature-compiler -- `
+  --input assets\pasus_native\signatures\pasus_core.psig `
+  --output assets\pasus_native\signatures\pasus_core.psig `
+  --metadata assets\pasus_native\signatures\pasus_core.metadata.json `
+  --version 0.1.1
+```
+
+The compiler validates metadata, rejects unsafe broad signatures, emits pack metadata, and records a canonical pack hash that PNE verifies on load.
+
 Weak signals do not become scary detections by themselves: a normal `.exe` in Downloads, an unknown CLI binary, a VPN installer, or an unsigned developer tool is not shown as malware unless stronger independent signals combine.
 
 Native ML support is offline-first and honest. The included `.pmodel` is a development model marked `production_ready=false`; it proves deterministic local inference but cannot auto-quarantine by itself or claim production AI protection. The `ml_native/` folder contains the developer training/export pipeline and schemas. User labels are saved locally for export; the production app does not retrain itself silently.

@@ -57,14 +57,16 @@ impl RiskFusion {
             });
         }
 
-        let has_test = evidence.iter().any(|item| item.id == "eicar_test_signature");
+        let has_test = evidence
+            .iter()
+            .any(|item| item.id == "eicar_test_signature");
         let has_known_bad = evidence.iter().any(|item| item.id == "known_bad_hash");
-        let has_confirmed_signature = evidence.iter().any(|item| {
-            item.source == EvidenceSource::NativeSignature && item.weight >= 90
-        });
-        let has_ransomware_behavior = evidence.iter().any(|item| {
-            item.source == EvidenceSource::NativeBehavior && item.weight >= 85
-        });
+        let has_confirmed_signature = evidence
+            .iter()
+            .any(|item| item.source == EvidenceSource::NativeSignature && item.weight >= 90);
+        let has_ransomware_behavior = evidence
+            .iter()
+            .any(|item| item.source == EvidenceSource::NativeBehavior && item.weight >= 85);
 
         if has_test {
             return final_verdict(

@@ -248,24 +248,27 @@ pub fn evaluate_driver_request(
         }
     }
 
-    if let Some(yara) = yara_match(&path)? {
-        if yara.confirmed_or_high {
-            return Ok(block(request, &yara.reason, vec![VerdictEngine::Yara]));
+    #[cfg(feature = "compat_yara")]
+    {
+        if let Some(yara) = yara_match(&path)? {
+            if yara.confirmed_or_high {
+                return Ok(block(request, &yara.reason, vec![VerdictEngine::Yara]));
+            }
+            return Ok(ScanVerdict {
+                request_id: request.request_id.clone(),
+                action: DriverVerdictAction::AllowAndMonitor,
+                final_verdict: FinalVerdict::Suspicious,
+                confidence: VerdictConfidence::Medium,
+                engines_used: vec![VerdictEngine::Yara],
+                reason_summary: yara.reason,
+                cache_ttl_ms: 30_000,
+                quarantine_after_block: false,
+                trust_level: ApplicationTrustLevel::Suspicious,
+                requires_user_approval: false,
+                monitor_process: true,
+                label_as_malware: false,
+            });
         }
-        return Ok(ScanVerdict {
-            request_id: request.request_id.clone(),
-            action: DriverVerdictAction::AllowAndMonitor,
-            final_verdict: FinalVerdict::Suspicious,
-            confidence: VerdictConfidence::Medium,
-            engines_used: vec![VerdictEngine::Yara],
-            reason_summary: yara.reason,
-            cache_ttl_ms: 30_000,
-            quarantine_after_block: false,
-            trust_level: ApplicationTrustLevel::Suspicious,
-            requires_user_approval: false,
-            monitor_process: true,
-            label_as_malware: false,
-        });
     }
 
     match config.mode {
@@ -320,8 +323,12 @@ fn native_engine_verdict(
     if !path.exists() || path.is_dir() {
         return Ok(None);
     }
-    let mut engine = PasusNativeEngine::initialize(EngineConfig::from_repo_root(native_asset_root()))?;
-    Ok(Some(engine.scan_file(path.to_path_buf(), PneScanActionMode::DetectOnly)?))
+    let mut engine =
+        PasusNativeEngine::initialize(EngineConfig::from_repo_root(native_asset_root()))?;
+    Ok(Some(engine.scan_file(
+        path.to_path_buf(),
+        PneScanActionMode::DetectOnly,
+    )?))
 }
 
 fn native_asset_root() -> PathBuf {
@@ -460,21 +467,13 @@ fn sha256_file(path: &Path) -> anyhow::Result<String> {
     Ok(format!("sha256:{:x}", hasher.finalize()))
 }
 
-fn local_signature_match(path: &Path) -> anyhow::Result<bool> {
-    let bytes = fs::read(path)?;
-    Ok(bytes
-        .windows(EICAR_TEST_SIGNATURE.len())
-        .any(|window| window == EICAR_TEST_SIGNATURE.as_bytes())
-        || bytes
-            .windows(PASUS_SAFE_EICAR_SIMULATOR.len())
-            .any(|window| window == PASUS_SAFE_EICAR_SIMULATOR.as_bytes()))
-}
-
+#[cfg(feature = "compat_yara")]
 struct YaraDecision {
     reason: String,
     confirmed_or_high: bool,
 }
 
+#[cfg(feature = "compat_yara")]
 fn yara_match(path: &Path) -> anyhow::Result<Option<YaraDecision>> {
     let rules_path = default_yara_rules_path();
     if !rules_path.is_file() {
@@ -517,6 +516,7 @@ fn yara_match(path: &Path) -> anyhow::Result<Option<YaraDecision>> {
     Ok(None)
 }
 
+#[cfg(feature = "compat_yara")]
 fn default_yara_rules_path() -> PathBuf {
     let mut roots = Vec::new();
     if let Ok(current_exe) = std::env::current_exe() {
@@ -546,12 +546,14 @@ fn default_yara_rules_path() -> PathBuf {
     PathBuf::from("assets/yara/pasus_core_rules.yar")
 }
 
+#[cfg(feature = "compat_yara")]
 fn metadata_value(line: &str, key: &str) -> Option<String> {
     let prefix = format!("{key} =");
     line.strip_prefix(&prefix)
         .and_then(|value| quoted_value(value.trim()))
 }
 
+#[cfg(feature = "compat_yara")]
 fn quoted_value(value: &str) -> Option<String> {
     let start = value.find('"')?;
     let rest = &value[start + 1..];
@@ -573,8 +575,7 @@ fn should_fail_open_path(path: &Path) -> bool {
         || lower.contains("/pasus/quarantine/")
 }
 
-const EICAR_TEST_SIGNATURE: &str =
-    "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+#[cfg(test)]
 const PASUS_SAFE_EICAR_SIMULATOR: &str = "PASUS-SAFE-EICAR-SIMULATOR-FILE";
 
 #[cfg(test)]
@@ -719,7 +720,7 @@ mod tests {
     }
 
     #[test]
-    fn medium_yara_is_monitor_only() {
+    fn medium_native_rule_is_monitor_only() {
         let dir = tempdir().unwrap();
         let file = dir.path().join("script.ps1");
         fs::write(&file, "[Convert]::FromBase64String('AAAA')").unwrap();
