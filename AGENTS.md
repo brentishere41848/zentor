@@ -1,6 +1,15 @@
 # Zentor Agent Instructions
 
-Build Zentor as a legitimate, privacy-first anti-virus client application.
+Build Zentor Anti-Virus as a legitimate, privacy-first anti-virus and anti-malware desktop client.
+
+Product names:
+
+- Product: Zentor Anti-Virus
+- Short name: Zentor
+- Product family: Zentor Security
+- Engine: Zentor Native Engine
+- Engine short name: ZNE
+- Services: Zentor Core Service and Zentor Guard Service
 
 Required boundaries:
 
@@ -11,6 +20,23 @@ Required boundaries:
 - Keep telemetry explicit, minimal, documented, and related to anti-virus protection events.
 - Prefer deterministic rules and auditable decisions over opaque automated punishment.
 - Every admin action and automated rule decision must be audit logged.
+- Do not include real malware binaries, download malware automatically, execute suspicious files, disable security tools, or create evasion or credential-theft tooling.
+- Use safe validation only: EICAR, harmless known-bad test hashes, feature-vector fixtures, public indicators without binaries, and simulators that operate only in temporary test folders.
+- Avoid active product language for unrelated enforcement, gaming, marketing websites, or legacy branding. Historical legacy naming is allowed only in the dedicated migration note and archived material.
+
+Repository layout:
+
+- `apps/zentor_client/`: Flutter desktop client.
+- `core/zentor_native_engine/`: primary Rust detection engine.
+- `core/zentor_local_core/`: local scan/core command surface.
+- `core/zentor_guard_service/`: real-time guard and driver-facing service logic.
+- `core/zentor_windows_minifilter/` and `core/zentor_windows_process_guard/`: Windows driver validation paths.
+- `packages/zentor_protocol/`: Dart protocol models.
+- `assets/zentor_native/`: signatures, rules, trust data, ML assets, and safe test corpus.
+- `tools/`: branding, security, performance, Windows, simulator, and threat-intel gates.
+- `installer/windows/`: Windows MSI/EXE packaging.
+- `docs/`: architecture, limitations, safety, and validation documentation.
+- `archive/`: inactive historical material only.
 
 Engineering expectations:
 
@@ -20,3 +46,26 @@ Engineering expectations:
 - Add or update tests for rules, API handlers, and SDK payload construction when behavior changes.
 - Document commands and integration details in README and `docs/`.
 - When platform-native APIs require real credentials, provide clear interfaces and comments rather than fake behavior.
+
+Build commands:
+
+- Rust crate tests: `cargo test --manifest-path core/zentor_native_engine/Cargo.toml`, `cargo test --manifest-path core/zentor_local_core/Cargo.toml`, `cargo test --manifest-path core/zentor_guard_service/Cargo.toml`, and `cargo test --manifest-path services/api/Cargo.toml`.
+- Flutter client: `cd apps/zentor_client && flutter pub get && flutter analyze && flutter test`.
+- Dart protocol: `cd packages/zentor_protocol && dart pub get && dart test`.
+- Branding gate: `powershell -ExecutionPolicy Bypass -File tools/branding/branding-check.ps1`.
+- Product copy gate: `powershell -ExecutionPolicy Bypass -File tools/security/zentor-product-copy-gate.ps1`.
+- False-positive gate: `powershell -ExecutionPolicy Bypass -File tools/security/zentor-false-positive-gate.ps1`.
+- Windows release gate: `powershell -ExecutionPolicy Bypass -File tools/windows/zentor-release-gate.ps1`.
+
+Release commands:
+
+- Run all relevant tests and gates before tagging.
+- Build Windows installers through `.github/workflows/release-windows.yml` or `installer/windows/build-msi.ps1`.
+- Do not create release-candidate tags unless mandatory gates pass.
+
+Definition of done:
+
+- The implementation is real, defensive, locally testable, and documented.
+- New behavior has focused tests or an explicit documented blocker when required tools are unavailable.
+- `STATUS.md` records completed work, blockers, passing checks, failing checks, current commit, and the next exact task.
+- Driver, ML, and protection claims are honest and backed by self-tests or clearly shown as unavailable/development-only.
