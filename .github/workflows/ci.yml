@@ -36,6 +36,10 @@ jobs:
         working-directory: core/zentor_guard_service
         run: cargo test
 
+      - name: Test update service
+        working-directory: core/avorax_update_service
+        run: cargo test
+
       - name: Test backend API
         working-directory: services/api
         run: cargo test
@@ -60,6 +64,14 @@ jobs:
       - name: Protocol tests
         working-directory: packages/zentor_protocol
         run: dart test
+
+      - name: Avorax protocol dependencies
+        working-directory: packages/avorax_protocol
+        run: dart pub get
+
+      - name: Avorax protocol analyze
+        working-directory: packages/avorax_protocol
+        run: dart analyze
 
       - name: Flutter dependencies
         working-directory: apps/zentor_client
