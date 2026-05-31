@@ -50,6 +50,8 @@ Avorax rebrand and confirmed-threat Guard policy hardening after `v0.2.5`.
 - Added Avorax environment-variable aliases and default data/event/quarantine directories for new runtime data, with legacy `ZENTOR_*` fallbacks preserved for existing preview installs.
 - Added Avorax publisher trust and Avorax-owned runtime/quarantine path handling to the Guard driver verdict path so Lockdown Mode can allow verified Avorax-signed components and avoid misclassifying Avorax quarantine/runtime files.
 - Changed Guard Service detection engine identifiers for known-bad hash and native confirmed verdicts to Avorax-branded values in new quarantine records/events.
+- Tightened application-control quarantine policy so probable/high-risk review items are monitored in Block Confirmed and Monitor Only modes, blocked for user approval in Lockdown Mode, and not automatically quarantined or labeled as malware unless the evidence is confirmed.
+- Updated protection-mode copy so Block Confirmed Threats describes automatic stop/quarantine for confirmed threats only.
 
 ## Blockers
 

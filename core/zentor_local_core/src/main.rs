@@ -1109,6 +1109,66 @@ mod tests {
     }
 
     #[test]
+    fn block_confirmed_mode_does_not_quarantine_probable_review_item() {
+        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let policy = ApplicationControlPolicy::new(ProtectionMode::BlockConfirmedThreats);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::AllowAndMonitor);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(!result.label_as_malware);
+        assert!(!result.requires_user_approval);
+        assert!(result.monitor_process);
+    }
+
+    #[test]
+    fn lockdown_blocks_probable_review_item_without_quarantine_or_malware_label() {
+        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let policy = ApplicationControlPolicy::new(ProtectionMode::Lockdown);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::Block);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(result.requires_user_approval);
+        assert!(!result.label_as_malware);
+        assert!(!result.monitor_process);
+    }
+
+    #[test]
+    fn monitor_only_does_not_quarantine_probable_review_item() {
+        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let policy = ApplicationControlPolicy::new(ProtectionMode::MonitorOnly);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::AllowAndMonitor);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(!result.label_as_malware);
+        assert!(result.monitor_process);
+    }
+
+    #[test]
+    fn confirmed_malware_still_quarantines_when_protection_enabled() {
+        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\bad.exe");
+        input.confirmed_malware = true;
+        let policy = ApplicationControlPolicy::new(ProtectionMode::BlockConfirmedThreats);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::Quarantine);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::ConfirmedMalware);
+        assert!(result.label_as_malware);
+    }
+
+    #[test]
     fn balanced_allows_unknown_benign_executable_with_monitoring() {
         let input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\tool.exe");
         let policy = ApplicationControlPolicy::new(ProtectionMode::Balanced);

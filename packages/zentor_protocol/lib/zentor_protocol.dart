@@ -57,11 +57,11 @@ enum ProtectionMode {
     ProtectionMode.balanced =>
       'Blocks confirmed threats and reviews suspicious apps.',
     ProtectionMode.blockConfirmedThreats =>
-      'Blocks confirmed and high-confidence threats.',
+      'Automatically stops and quarantines confirmed threats only.',
     ProtectionMode.lockdown =>
       'Blocks unknown apps until an exact hash is approved.',
     ProtectionMode.developerMode =>
-      'Reduces interruption for developer tools while still blocking confirmed threats.',
+      'Reduces interruption for developer tools while still stopping confirmed threats.',
   };
 }
 

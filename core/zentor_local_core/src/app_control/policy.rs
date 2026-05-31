@@ -210,15 +210,30 @@ impl ApplicationControlPolicy {
         }
 
         if input.probable_malware && input.strong_risk_signal {
-            return result(
-                ApplicationControlDecision::Quarantine,
-                ApplicationTrustLevel::KnownBad,
-                "High-confidence probable malware with independent risk signal.",
-                true,
-                false,
-                false,
-                300_000,
-            );
+            return match self.mode {
+                ProtectionMode::Lockdown => result(
+                    ApplicationControlDecision::Block,
+                    ApplicationTrustLevel::Suspicious,
+                    "Probable malware signal blocked by Lockdown Mode for user review; not quarantined until confirmed.",
+                    false,
+                    true,
+                    false,
+                    30_000,
+                ),
+                ProtectionMode::MonitorOnly
+                | ProtectionMode::DeveloperMode
+                | ProtectionMode::Balanced
+                | ProtectionMode::BlockConfirmedThreats => result(
+                    ApplicationControlDecision::AllowAndMonitor,
+                    ApplicationTrustLevel::Suspicious,
+                    "Probable malware signal requires review; automatic quarantine is limited to confirmed threats.",
+                    false,
+                    false,
+                    true,
+                    30_000,
+                ),
+                ProtectionMode::Off => unreachable!(),
+            };
         }
 
         match self.mode {
