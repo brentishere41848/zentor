@@ -57,11 +57,23 @@ Build commands:
 - False-positive gate: `powershell -ExecutionPolicy Bypass -File tools/security/zentor-false-positive-gate.ps1`.
 - Windows release gate: `powershell -ExecutionPolicy Bypass -File tools/windows/zentor-release-gate.ps1`.
 
+Forbidden active string categories in product-facing content:
+
+- Legacy internal project naming and casing variants except in the dedicated migration note and `archive/`.
+- Unrelated game-enforcement, fair-play, match/session telemetry, or setup language for games.
+- Fake protection claims such as absolute-protection guarantees, unsupported certification claims, or unsupported customer-scale claims.
+
 Release commands:
 
 - Run all relevant tests and gates before tagging.
 - Build Windows installers through `.github/workflows/release-windows.yml` or `installer/windows/build-msi.ps1`.
 - Do not create release-candidate tags unless mandatory gates pass.
+
+Release gates:
+
+- Branding and product-copy gates must pass for active product-facing content.
+- Rust, Flutter, Dart, false-positive, performance, protection, driver, and installer gates must pass or have explicit blocker documentation before release decisions.
+- Release-candidate tags must not be created unless mandatory gates pass.
 
 Definition of done:
 

@@ -15,6 +15,7 @@ Cargo.lock
 .env
 .env.*
 !.env.example
+.codex/
 
 # OS/editor
 .DS_Store

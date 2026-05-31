@@ -1,50 +1,74 @@
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$paths = @(
-  "apps\zentor_client\lib\features\home",
-  "apps\zentor_client\lib\features\onboarding",
-  "apps\zentor_client\lib\features\protection",
-  "apps\zentor_client\lib\features\settings",
-  "apps\zentor_client\lib\features\scan",
-  "apps\zentor_client\lib\shared\widgets",
-  "apps\zentor_client\lib\app\router.dart",
-  "apps\zentor_client\lib\app\zentor_app.dart",
+$scanRoots = @(
+  "apps\zentor_client\lib",
+  "apps\zentor_client\test",
+  "packages\zentor_protocol\lib",
+  "installer\windows",
   "README.md",
-  "docs\client-ui.md"
+  "docs\anti-virus-overview.md",
+  "docs\architecture.md",
+  "docs\client-ui.md",
+  "docs\limitations.md",
+  "docs\native-engine.md",
+  "docs\real-time-protection.md",
+  "docs\quarantine.md",
+  "docs\recovery-vault.md"
 )
 
+$legacy = ("pa" + "sus")
 $forbidden = @(
-  ("pa" + "sus"),
+  $legacy,
   ("anti" + "-cheat"),
   ("fair" + " play"),
   ("gaming" + " protection"),
   ("game" + " setup"),
   ("player" + " session"),
   ("match" + " telemetry"),
-  "fake checkout",
-  "fake license",
-  "100% protection",
-  "perfect protection",
-  "certified by av-test",
-  "fake reviews",
-  "fake awards"
+  ("fake" + " checkout"),
+  ("fake" + " license"),
+  ("fake" + " reviews"),
+  ("fake" + " awards"),
+  ("100" + "% protection"),
+  ("perfect" + " protection"),
+  ("best" + " antivirus"),
+  ("guaranteed" + " protection"),
+  ("certified" + " by av-test"),
+  ("trusted" + " by millions")
+)
+
+$textExtensions = @(
+  ".dart",
+  ".md",
+  ".json",
+  ".yaml",
+  ".yml",
+  ".xml",
+  ".wxs",
+  ".wxl",
+  ".ps1",
+  ".sh",
+  ".txt"
 )
 
 $violations = @()
-foreach ($relative in $paths) {
+foreach ($relative in $scanRoots) {
   $path = Join-Path $root $relative
-  if (-not (Test-Path $path)) { continue }
-  $files = if ((Get-Item $path).PSIsContainer) {
-    Get-ChildItem -LiteralPath $path -Recurse -File -Include *.dart,*.tsx,*.ts,*.md,*.css
+  if (-not (Test-Path -LiteralPath $path)) { continue }
+
+  $files = if ((Get-Item -LiteralPath $path).PSIsContainer) {
+    Get-ChildItem -LiteralPath $path -Recurse -File |
+      Where-Object { $textExtensions -contains $_.Extension.ToLowerInvariant() }
   } else {
-    @(Get-Item $path)
+    @(Get-Item -LiteralPath $path)
   }
+
   foreach ($file in $files) {
     $content = (Get-Content -Raw -LiteralPath $file.FullName).ToLowerInvariant()
     foreach ($phrase in $forbidden) {
       if ($content.Contains($phrase)) {
-        $violations += "$($file.FullName): forbidden phrase '$phrase'"
+        $violations += "$($file.FullName): forbidden product-copy phrase '$phrase'"
       }
     }
   }
