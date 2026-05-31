@@ -1293,7 +1293,9 @@ mod tests {
 
     fn env_lock() -> std::sync::MutexGuard<'static, ()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+        LOCK.get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     #[test]
@@ -1322,13 +1324,18 @@ mod tests {
             Some(value) => std::env::set_var("AVORAX_ENGINE_ROOT", value),
             None => std::env::remove_var("AVORAX_ENGINE_ROOT"),
         }
-        assert_eq!(locator.asset_root, dir.path());
-        assert_eq!(locator.installed_engine_dir, engine_dir);
+        let expected_root = dir.path().canonicalize().unwrap();
+        let expected_engine_dir = engine_dir.canonicalize().unwrap();
+        assert_eq!(locator.asset_root, expected_root);
+        assert_eq!(locator.installed_engine_dir, expected_engine_dir);
         assert_eq!(
             locator.signatures_dir,
-            dir.path().join("engine").join("signatures")
+            locator.installed_engine_dir.join("signatures")
         );
-        assert!(locator.paths_checked.iter().any(|path| path == dir.path()));
+        assert!(locator
+            .paths_checked
+            .iter()
+            .any(|path| path == &locator.asset_root));
     }
 
     #[test]
