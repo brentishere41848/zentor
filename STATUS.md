@@ -46,6 +46,8 @@ Avorax rebrand and confirmed-threat Guard policy hardening after `v0.2.5`.
 - Removed placeholder protected-app registry entries that looked like unrelated product-domain examples.
 - Replaced the vague partial-protection status label with `Driver Self-Test Required` and changed verified-ready UI copy to avoid unsupported absolute protection claims.
 - Hardened Guard Service post-launch response so disabled/observe-only modes do not stop or quarantine, and automatic stop/quarantine is limited to confirmed local known-bad/test-threat/native confirmed verdicts.
+- Switched new quarantine payload filenames to `.avoraxq` across the local core, native engine, and Guard Service while keeping legacy quarantine records readable.
+- Added Avorax environment-variable aliases and default data/event/quarantine directories for new runtime data, with legacy `ZENTOR_*` fallbacks preserved for existing preview installs.
 
 ## Blockers
 
@@ -61,6 +63,7 @@ Avorax rebrand and confirmed-threat Guard policy hardening after `v0.2.5`.
 - `powershell -ExecutionPolicy Bypass -File tools\security\zentor-product-copy-gate.ps1`
 - `powershell -ExecutionPolicy Bypass -File tools\security\zentor-no-malware-binaries-gate.ps1`
 - Active-string search for old product copy, old three-letter engine aliases, vague partial-protection label, unrelated product-domain copy, and fake protection claims.
+- Active quarantine-extension search confirming new runtime writes use `.avoraxq` and old quarantine extensions only remain in migration/readback paths.
 - `python tools\zentor_intel\import_github_malware_metadata.py --config assets\zentor_native\threat_intel\sources.example.json --output $env:TEMP\zentor_metadata.jsonl`
 - `python tools\zentor_intel\import_github_hashes_only.py ...` with a safe temporary SHA-256 fixture
 - `python tools\zentor_intel\build_known_bad_from_github.py ...` with a safe temporary SHA-256 fixture

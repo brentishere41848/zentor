@@ -9,6 +9,8 @@ use crate::scanner::ScanResult;
 
 use super::{QuarantineRecord, QuarantineStatus};
 
+const QUARANTINE_EXTENSION: &str = "avoraxq";
+
 pub struct QuarantineStore {
     base: PathBuf,
 }
@@ -27,7 +29,7 @@ impl QuarantineStore {
     pub fn quarantine_file(&self, path: &Path, result: &ScanResult) -> Result<QuarantineRecord> {
         fs::create_dir_all(&self.base)?;
         let id = Uuid::new_v4().to_string();
-        let quarantine_path = self.base.join(format!("{id}.zentorq"));
+        let quarantine_path = self.base.join(format!("{id}.{QUARANTINE_EXTENSION}"));
         let metadata = fs::metadata(path)?;
         fs::rename(path, &quarantine_path)?;
         remove_executable_permissions(&quarantine_path)?;
@@ -124,6 +126,9 @@ impl QuarantineStore {
 }
 
 fn quarantine_base() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_QUARANTINE_DIR") {
+        return PathBuf::from(path);
+    }
     if let Ok(path) = std::env::var("ZENTOR_QUARANTINE_DIR") {
         return PathBuf::from(path);
     }
@@ -142,9 +147,9 @@ fn quarantine_base() -> PathBuf {
         }
     }
     if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".local/share/zentor/quarantine");
+        return PathBuf::from(home).join(".local/share/avorax/quarantine");
     }
-    PathBuf::from(".zentor/quarantine")
+    PathBuf::from(".avorax/quarantine")
 }
 
 #[cfg(unix)]
@@ -187,6 +192,7 @@ mod tests {
         };
         let record = store.quarantine_file(&file, &result).unwrap();
         assert_eq!(record.status, QuarantineStatus::Quarantined);
+        assert!(record.quarantine_path.ends_with(".avoraxq"));
         assert!(!file.exists());
         assert!(Path::new(&record.quarantine_path).exists());
         assert_eq!(store.list().unwrap().len(), 1);
@@ -235,6 +241,44 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].quarantine_id, "legacy");
+        assert!(Path::new(&records[0].quarantine_path).exists());
+    }
+
+    #[test]
+    fn legacy_zentor_quarantine_record_remains_readable() {
+        let dir = tempdir().unwrap();
+        let base = dir.path().join("q");
+        fs::create_dir_all(&base).unwrap();
+        let legacy_file = base.join("legacy.zentorq");
+        fs::write(&legacy_file, b"quarantined").unwrap();
+        let record = QuarantineRecord {
+            quarantine_id: "legacy-zentor".to_string(),
+            original_path: "C:/original/file.exe".to_string(),
+            quarantine_path: legacy_file.display().to_string(),
+            sha256: "sha256:legacy".to_string(),
+            file_size: 11,
+            detection_name: "Legacy detection".to_string(),
+            engine: "Avorax Native Engine".to_string(),
+            quarantined_at: Utc::now(),
+            status: QuarantineStatus::Quarantined,
+            user_note: None,
+            source: "scanner".to_string(),
+            blocked_before_execution: false,
+            process_started: false,
+            action_taken: "quarantined".to_string(),
+            process_id: None,
+        };
+        fs::write(
+            base.join("legacy-zentor.json"),
+            serde_json::to_string_pretty(&record).unwrap(),
+        )
+        .unwrap();
+
+        let store = QuarantineStore::with_base(base);
+        let records = store.list().unwrap();
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].quarantine_id, "legacy-zentor");
         assert!(Path::new(&records[0].quarantine_path).exists());
     }
 

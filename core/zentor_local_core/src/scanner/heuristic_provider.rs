@@ -402,12 +402,17 @@ fn likely_packed_or_high_entropy(path: &Path, lower: &str) -> bool {
 }
 
 fn is_zentor_trusted_artifact(lower_name: &str, path_lower: &str) -> bool {
-    (lower_name.starts_with("zentor-antivirus-")
+    ((lower_name.starts_with("avorax-antivirus-") || lower_name.starts_with("zentor-antivirus-"))
         && (lower_name.ends_with("-setup.exe")
             || lower_name.ends_with("-x64.msi")
             || lower_name.ends_with(".msi")))
+        || path_lower.contains("\\program files\\avorax\\")
         || path_lower.contains("\\program files\\zentor\\")
+        || path_lower.contains("\\programdata\\avorax\\")
         || path_lower.contains("\\programdata\\zentor\\")
+        || path_lower.contains("\\avorax\\quarantine\\")
+        || path_lower.contains("\\avorax-quarantine\\")
+        || path_lower.contains("\\avorax-native-quarantine\\")
         || path_lower.contains("\\zentor-quarantine\\")
         || path_lower.contains("\\zentor-native-quarantine\\")
         || path_lower.contains("\\apps\\zentor_client\\")
@@ -481,12 +486,12 @@ mod tests {
     }
 
     #[test]
-    fn zentor_installer_exe_is_suppressed() {
+    fn avorax_installer_exe_is_suppressed() {
         let dir = tempdir().unwrap();
         let downloads = dir.path().join("Downloads");
         fs::create_dir_all(&downloads).unwrap();
         let file = downloads.join("Avorax-AntiVirus-0.2.2-x64-setup.exe");
-        fs::write(&file, b"zentor installer fixture").unwrap();
+        fs::write(&file, b"avorax installer fixture").unwrap();
 
         assert!(HeuristicProvider.inspect_file(&file).is_none());
         let score = HeuristicProvider.score_file(&file).unwrap();
@@ -495,12 +500,12 @@ mod tests {
     }
 
     #[test]
-    fn zentor_msi_is_suppressed() {
+    fn avorax_msi_is_suppressed() {
         let dir = tempdir().unwrap();
         let downloads = dir.path().join("Downloads");
         fs::create_dir_all(&downloads).unwrap();
         let file = downloads.join("Avorax-AntiVirus-0.2.2-x64.msi");
-        fs::write(&file, b"zentor msi fixture").unwrap();
+        fs::write(&file, b"avorax msi fixture").unwrap();
 
         assert!(HeuristicProvider.inspect_file(&file).is_none());
         let score = HeuristicProvider.score_file(&file).unwrap();

@@ -202,7 +202,7 @@ Ransomware Guard watches for behavior such as rapid mass file modification, susp
 
 ## Quarantine And Allowlist
 
-When scan mode allows quarantine and a confirmed infected file is detected, Avorax moves it to the Avorax quarantine folder, renames it with a safe `.zentorq` extension, removes executable permissions where supported, and stores JSON metadata. Avorax does not permanently delete files automatically.
+When scan mode allows quarantine and a confirmed infected file is detected, Avorax moves it to the Avorax quarantine folder, renames it with a safe `.avoraxq` extension, removes executable permissions where supported, and stores JSON metadata. Avorax does not permanently delete files automatically. Legacy quarantine records remain readable for migration.
 
 Allowlist entries are explicit. Avorax blocks unsafe root paths such as `C:\`, `C:\Windows`, `/`, `/usr`, `/bin`, `/sbin`, and `/etc`.
 

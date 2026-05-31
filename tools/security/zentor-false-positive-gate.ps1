@@ -36,9 +36,9 @@ Push-Location (Join-Path $RepoRoot "core\zentor_local_core")
 try {
   cargo test normal_exe_is_not_confirmed_threat
   if ($LASTEXITCODE -ne 0) { Add-GateError "normal_exe_is_not_confirmed_threat failed." }
-  cargo test zentor_installer_exe_is_suppressed
+  cargo test avorax_installer_exe_is_suppressed
   if ($LASTEXITCODE -ne 0) { Add-GateError "Avorax installer EXE false-positive suppression failed." }
-  cargo test zentor_msi_is_suppressed
+  cargo test avorax_msi_is_suppressed
   if ($LASTEXITCODE -ne 0) { Add-GateError "Avorax MSI false-positive suppression failed." }
   cargo test setup_exe_in_downloads_is_not_probable_or_confirmed
   if ($LASTEXITCODE -ne 0) { Add-GateError "setup.exe weak-signal false-positive suppression failed." }
@@ -56,9 +56,9 @@ Push-Location (Join-Path $RepoRoot "core\zentor_native_engine")
 try {
   cargo test normal_exe_in_downloads_is_not_malware
   if ($LASTEXITCODE -ne 0) { Add-GateError "Native normal EXE false-positive suppression failed." }
-  cargo test zentor_installer_exe_is_likely_clean_not_quarantine_eligible
+  cargo test avorax_installer_exe_is_likely_clean_not_quarantine_eligible
   if ($LASTEXITCODE -ne 0) { Add-GateError "Native Avorax installer trust failed." }
-  cargo test zentor_msi_is_likely_clean_not_quarantine_eligible
+  cargo test avorax_msi_is_likely_clean_not_quarantine_eligible
   if ($LASTEXITCODE -ne 0) { Add-GateError "Native Avorax MSI trust failed." }
 } finally {
   Pop-Location

@@ -28,7 +28,7 @@ The Windows MSI bundles the ClamAV runtime beside the app. Signature database up
 
 ## Quarantine
 
-Infected files are moved to the Avorax quarantine folder, renamed with `.zentorq`, stripped of executable bits where supported, and paired with JSON metadata.
+Infected files are moved to the Avorax quarantine folder, renamed with `.avoraxq`, stripped of executable bits where supported, and paired with JSON metadata. Legacy quarantine records remain readable.
 
 ## Tests
 

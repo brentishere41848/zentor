@@ -59,6 +59,9 @@ pub fn migrate_from_dirs(source: PathBuf, destination: PathBuf) -> Result<Migrat
 }
 
 pub fn zentor_data_dir() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_DATA_DIR") {
+        return PathBuf::from(path);
+    }
     if let Ok(path) = std::env::var("ZENTOR_DATA_DIR") {
         return PathBuf::from(path);
     }

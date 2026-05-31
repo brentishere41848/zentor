@@ -9,7 +9,7 @@ The same quarantine store is used by manual scans and Avorax Guard. If the Guard
 Avorax:
 
 - Moves the file into the Avorax quarantine folder.
-- Renames it to a safe random ID with a `.zentorq` extension.
+- Renames it to a safe random ID with a `.avoraxq` extension. Legacy quarantine records remain readable for migration.
 - Removes executable permissions where supported.
 - Stores a JSON metadata record.
 - Shows a local event in the app.
@@ -23,7 +23,7 @@ Default quarantine locations:
 
 - Windows: `%ProgramData%/Avorax/Quarantine` or user app data fallback.
 - macOS: `~/Library/Application Support/Avorax/Quarantine`.
-- Linux: `~/.local/share/zentor/quarantine`.
+- Linux: `~/.local/share/avorax/quarantine`.
 
 ## Metadata
 

@@ -85,6 +85,9 @@ impl TrainingLabelStore {
 }
 
 fn data_dir() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_DATA_DIR") {
+        return PathBuf::from(path);
+    }
     #[cfg(windows)]
     {
         if let Ok(program_data) = std::env::var("PROGRAMDATA") {
@@ -92,9 +95,9 @@ fn data_dir() -> PathBuf {
         }
     }
     if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".local/share/zentor/data");
+        return PathBuf::from(home).join(".local/share/avorax/data");
     }
-    PathBuf::from(".zentor/data")
+    PathBuf::from(".avorax/data")
 }
 
 #[cfg(test)]

@@ -25,6 +25,7 @@ mod preexecution_policy;
 mod self_test;
 
 const SERVICE_NAME: &str = "zentor_guard_service";
+const QUARANTINE_EXTENSION: &str = "avoraxq";
 
 #[derive(Debug, Deserialize)]
 struct GuardCommand {
@@ -556,6 +557,9 @@ fn write_guard_event(event: &GuardEvent) -> anyhow::Result<()> {
 }
 
 fn event_log_base() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_EVENT_LOG_DIR") {
+        return PathBuf::from(path);
+    }
     if let Ok(path) = std::env::var("ZENTOR_EVENT_LOG_DIR") {
         return PathBuf::from(path);
     }
@@ -578,9 +582,9 @@ fn event_log_base() -> PathBuf {
         }
     }
     if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".local/share/zentor/events");
+        return PathBuf::from(home).join(".local/share/avorax/events");
     }
-    PathBuf::from(".zentor/events")
+    PathBuf::from(".avorax/events")
 }
 
 #[derive(Debug)]
@@ -709,7 +713,7 @@ fn quarantine_file(
     let base = quarantine_base();
     fs::create_dir_all(&base)?;
     let id = Uuid::new_v4().to_string();
-    let destination = base.join(format!("{id}.zentorq"));
+    let destination = base.join(format!("{id}.{QUARANTINE_EXTENSION}"));
     let file_size = fs::metadata(path)
         .map(|metadata| metadata.len())
         .unwrap_or(0);
@@ -775,6 +779,12 @@ fn remove_executable_permissions(_path: &Path) -> anyhow::Result<()> {
 }
 
 fn quarantine_base() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_GUARD_QUARANTINE_DIR") {
+        return PathBuf::from(path);
+    }
+    if let Ok(path) = std::env::var("AVORAX_QUARANTINE_DIR") {
+        return PathBuf::from(path);
+    }
     if let Ok(path) = std::env::var("ZENTOR_GUARD_QUARANTINE_DIR") {
         return PathBuf::from(path);
     }
@@ -800,9 +810,9 @@ fn quarantine_base() -> PathBuf {
         }
     }
     if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".local/share/zentor/quarantine");
+        return PathBuf::from(home).join(".local/share/avorax/quarantine");
     }
-    PathBuf::from(".zentor/quarantine")
+    PathBuf::from(".avorax/quarantine")
 }
 
 fn sha256_file(path: &Path) -> anyhow::Result<String> {
@@ -1153,6 +1163,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.action, "stoppedAndQuarantined");
         assert!(!file.exists());
+        assert!(result.quarantine_path.as_ref().unwrap().ends_with(".avoraxq"));
         assert!(Path::new(result.quarantine_path.as_ref().unwrap()).exists());
         let record_path = result.quarantine_record_path.as_ref().unwrap();
         assert!(Path::new(record_path).exists());

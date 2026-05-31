@@ -6,6 +6,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::quarantine_action::QUARANTINE_EXTENSION;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuarantineRecord {
     pub quarantine_id: String,
@@ -38,7 +40,7 @@ impl QuarantineStore {
     ) -> Result<QuarantineRecord> {
         fs::create_dir_all(&self.root)?;
         let id = Uuid::new_v4().to_string();
-        let quarantine_path = self.root.join(format!("{id}.zentorq"));
+        let quarantine_path = self.root.join(format!("{id}.{QUARANTINE_EXTENSION}"));
         fs::rename(path, &quarantine_path)
             .or_else(|_| {
                 fs::copy(path, &quarantine_path)?;

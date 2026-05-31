@@ -115,12 +115,12 @@ mod tests {
     }
 
     #[test]
-    fn zentor_installer_exe_is_likely_clean_not_quarantine_eligible() {
+    fn avorax_installer_exe_is_likely_clean_not_quarantine_eligible() {
         let (dir, mut engine) = test_engine();
         let downloads = dir.path().join("Downloads");
         fs::create_dir_all(&downloads).unwrap();
         let file = downloads.join("Avorax-AntiVirus-0.2.2-x64-setup.exe");
-        fs::write(&file, b"zentor installer fixture").unwrap();
+        fs::write(&file, b"avorax installer fixture").unwrap();
         let verdict = engine
             .scan_file(file, ScanActionMode::AutoQuarantineConfirmed)
             .unwrap();
@@ -132,12 +132,12 @@ mod tests {
     }
 
     #[test]
-    fn zentor_msi_is_likely_clean_not_quarantine_eligible() {
+    fn avorax_msi_is_likely_clean_not_quarantine_eligible() {
         let (dir, mut engine) = test_engine();
         let downloads = dir.path().join("Downloads");
         fs::create_dir_all(&downloads).unwrap();
         let file = downloads.join("Avorax-AntiVirus-0.2.2-x64.msi");
-        fs::write(&file, b"zentor msi fixture").unwrap();
+        fs::write(&file, b"avorax msi fixture").unwrap();
         let verdict = engine
             .scan_file(file, ScanActionMode::AutoQuarantineConfirmed)
             .unwrap();
@@ -217,7 +217,8 @@ mod tests {
         let verdict = engine
             .scan_file(file.clone(), ScanActionMode::AutoQuarantineConfirmed)
             .unwrap();
-        assert!(verdict.quarantine_record.is_some());
+        let record = verdict.quarantine_record.as_ref().unwrap();
+        assert!(record.quarantine_path.ends_with(".avoraxq"));
         assert!(!file.exists());
     }
 

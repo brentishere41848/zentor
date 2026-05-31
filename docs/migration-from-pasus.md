@@ -9,8 +9,8 @@ The local core keeps a safe migration path for existing preview users:
 - Detect the old Pasus local data directory.
 - Copy config, quarantine metadata, allowlist data, logs, and scan history into the Avorax data directory.
 - Preserve quarantine metadata and original paths.
-- Keep old `.pasusq` quarantine files readable.
-- Write new quarantine files as `.zentorq` for compatibility with existing preview tooling until the quarantine extension migration is implemented.
+- Keep old `.pasusq` and `.zentorq` quarantine files readable.
+- Write new quarantine files as `.avoraxq`.
 - Do not delete old data automatically.
 - Do not restore or re-enable quarantined files during migration.
 

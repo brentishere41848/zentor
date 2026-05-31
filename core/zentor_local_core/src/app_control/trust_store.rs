@@ -17,9 +17,11 @@ pub fn is_passthrough_system_or_zentor_path(path: &Path) -> bool {
         || lower.contains("\\windows\\syswow64\\")
         || lower.ends_with("\\zentor_local_core.exe")
         || lower.ends_with("\\zentor_guard_service.exe")
+        || lower.contains("\\avorax\\quarantine\\")
         || lower.contains("\\zentor\\quarantine\\")
         || lower.starts_with("/usr/")
         || lower.starts_with("/bin/")
         || lower.starts_with("/sbin/")
+        || lower.contains("/avorax/quarantine/")
         || lower.contains("/zentor/quarantine/")
 }

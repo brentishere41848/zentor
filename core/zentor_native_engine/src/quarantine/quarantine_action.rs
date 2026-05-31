@@ -1,1 +1,1 @@
-pub const QUARANTINE_EXTENSION: &str = "zentorq";
+pub const QUARANTINE_EXTENSION: &str = "avoraxq";
