@@ -30,11 +30,11 @@ docs/
 ## Get The Code
 
 ```powershell
-git clone https://github.com/brentishere41848/zentor.git Avorax
+git clone https://github.com/brentishere41848/Avorax.git Avorax
 cd Avorax
 ```
 
-The GitHub repository URL still contains the old repository name, but the active product is Avorax Anti-Virus.
+The active GitHub repository is `brentishere41848/Avorax`, and the app update checker uses that repository's GitHub Releases by default.
 
 ## Run The Flutter App
 
@@ -121,7 +121,7 @@ Developer endpoint overrides are hidden under `Settings > Advanced > Developer o
 
 ## App Updates
 
-Avorax checks GitHub Releases for newer tagged builds and shows a visible update state in Home and `Settings > Updates`. It does not silently install updates. When a newer release exists, the user can choose `Download Update`, which opens the release installer or GitHub release page.
+Avorax checks GitHub Releases from `brentishere41848/Avorax` for newer tagged builds and shows a visible update state in Home and `Settings > Updates`. It does not silently install updates. When a newer release exists, the user can choose `Download Update`, which opens the release installer or GitHub release page.
 
 Release builds should be tagged with `vMAJOR.MINOR.PATCH`. The Windows release workflow builds Flutter with the tag version, publishes MSI/EXE assets, and the installed app compares that local version against the latest GitHub release.
 
@@ -225,20 +225,20 @@ For normal testing, installing the MSI or EXE is easier than running the app fro
 
 ```powershell
 cd C:\Users\Brent\CodexProjects\Avorax
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.7 -RequireLocalCore -AllowDevelopmentModel
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.8 -RequireLocalCore -AllowDevelopmentModel
 ```
 
 The installers are written to:
 
 ```text
-dist\Avorax-AntiVirus-0.2.7-x64.msi
-dist\Avorax-AntiVirus-0.2.7-x64-setup.exe
+dist\Avorax-AntiVirus-0.2.8-x64.msi
+dist\Avorax-AntiVirus-0.2.8-x64-setup.exe
 ```
 
 Install either file:
 
-- `Avorax-AntiVirus-0.2.7-x64-setup.exe` is the easiest option for most users.
-- `Avorax-AntiVirus-0.2.7-x64.msi` is better for clean installer testing and enterprise-style deployment checks.
+- `Avorax-AntiVirus-0.2.8-x64-setup.exe` is the easiest option for most users.
+- `Avorax-AntiVirus-0.2.8-x64.msi` is better for clean installer testing and enterprise-style deployment checks.
 
 The MSI/EXE installs the app, local core helper, Avorax Native Engine assets, app assets, Guard Service, safe validation assets, release gates, driver tooling, safe simulator tools, threat-intel tools, docs, and `install-manifest.json`. On Windows it also registers `zentor_guard_service` as the visible Avorax Guard Service so confirmed threats can be monitored and stopped after launch when protection is enabled. It does not replace the Windows driver-development VM workflow. True pre-execution blocking still requires WDK or EWDK, administrator rights, test-signing in a disposable VM, the minifilter/process-guard driver path, and the driver validation scripts.
 

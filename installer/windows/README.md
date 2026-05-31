@@ -3,7 +3,7 @@
 Build the Windows MSI and EXE installers from the repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.7
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.8
 ```
 
 The script:
@@ -28,7 +28,7 @@ The script:
 Release packaging fails if `zentor_local_core.exe`, `zentor_guard_service.exe`, or required engine assets cannot be included:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.7 -RequireLocalCore -AllowDevelopmentModel
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.8 -RequireLocalCore -AllowDevelopmentModel
 ```
 
 `-AllowIncompletePayload` exists only for local packaging diagnostics and must not be used for release installers. A normal MSI/EXE build installs the app, local core, Guard Service, assets, engine packs, validation tools, docs, and manifest together.
@@ -36,7 +36,7 @@ powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Versio
 ClamAV compatibility is optional and disabled by default. Use `-IncludeClamAVCompatibility` only when explicitly testing compatibility mode:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.7 -IncludeClamAVCompatibility
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.8 -IncludeClamAVCompatibility
 ```
 
 When compatibility mode is included, the MSI places ClamAV in `C:\Program Files\Avorax\ClamAV` and the Avorax local core discovers `clamscan.exe` there automatically. Avorax does not install ClamAV as a hidden service and does not silently enable persistence.
@@ -46,7 +46,7 @@ The EXE installer is a WiX Burn bootstrapper that contains the MSI. It is useful
 The MSI build requires AI model assets. If model metadata is `production_ready=false`, pass `-AllowDevelopmentModel` for a non-production installer:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.7 -RequireLocalCore -AllowDevelopmentModel
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.8 -RequireLocalCore -AllowDevelopmentModel
 ```
 
 The Guard Service is not a kernel driver and does not provide true pre-execution blocking by itself. It monitors process starts and can stop/quarantine confirmed threats after launch when the user enables that protection mode. High-confidence non-confirmed detections remain review-only. True pre-execution blocking still requires the Windows driver validation workflow.

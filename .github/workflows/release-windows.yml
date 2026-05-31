@@ -68,7 +68,7 @@ jobs:
 
       - name: Build Flutter Windows app
         working-directory: apps/zentor_client
-        run: flutter build windows --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.build_number }}" --dart-define=AVORAX_APP_VERSION="${{ steps.version.outputs.version }}" --dart-define=ZENTOR_APP_VERSION="${{ steps.version.outputs.version }}"
+        run: flutter build windows --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.build_number }}" --dart-define=AVORAX_APP_VERSION="${{ steps.version.outputs.version }}" --dart-define=ZENTOR_APP_VERSION="${{ steps.version.outputs.version }}" --dart-define=AVORAX_UPDATES_REPO_OWNER=brentishere41848 --dart-define=AVORAX_UPDATES_REPO_NAME=Avorax
 
       - name: Build local scan core
         working-directory: core/zentor_local_core

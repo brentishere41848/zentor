@@ -36,7 +36,7 @@ const avoraxUpdatesRepoOwner = String.fromEnvironment(
 
 const zentorUpdatesRepoName = String.fromEnvironment(
   'ZENTOR_UPDATES_REPO_NAME',
-  defaultValue: 'zentor_anti-virus',
+  defaultValue: 'Avorax',
 );
 const avoraxUpdatesRepoName = String.fromEnvironment(
   'AVORAX_UPDATES_REPO_NAME',

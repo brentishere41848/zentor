@@ -200,7 +200,7 @@ if (-not $SkipFlutterBuild) {
   Push-Location $clientDir
   try {
     $buildNumber = Get-FlutterBuildNumber $Version
-    Invoke-Checked { & $flutter build windows --release --build-name $Version --build-number $buildNumber "--dart-define=AVORAX_APP_VERSION=$Version" "--dart-define=ZENTOR_APP_VERSION=$Version" } "Flutter Windows release build failed."
+    Invoke-Checked { & $flutter build windows --release --build-name $Version --build-number $buildNumber "--dart-define=AVORAX_APP_VERSION=$Version" "--dart-define=ZENTOR_APP_VERSION=$Version" "--dart-define=AVORAX_UPDATES_REPO_OWNER=brentishere41848" "--dart-define=AVORAX_UPDATES_REPO_NAME=Avorax" } "Flutter Windows release build failed."
   } finally {
     Pop-Location
   }
@@ -548,7 +548,7 @@ $bundleWxs = @"
     <BootstrapperApplication>
       <bal:WixStandardBootstrapperApplication
         Theme="hyperlinkLicense"
-        LicenseUrl="https://github.com/brentishere41848/zentor_anti-virus/blob/main/docs/privacy.md" />
+        LicenseUrl="https://github.com/brentishere41848/Avorax/blob/main/docs/privacy.md" />
     </BootstrapperApplication>
     <Chain>
       <MsiPackage SourceFile="$(XmlEscape $msiPath)" Compressed="yes" />

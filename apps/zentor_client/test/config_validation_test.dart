@@ -8,6 +8,8 @@ void main() {
     expect(config.apiBaseUrl, 'http://127.0.0.1:8000');
     expect(config.projectId, 'avorax-default');
     expect(config.publicClientKey, 'avorax-public-client');
+    expect(config.updatesRepoOwner, 'brentishere41848');
+    expect(config.updatesRepoName, 'Avorax');
   });
 
   test('config validation uses cloud wording instead of form errors', () {

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Avorax installer completeness and `v0.2.7` release preparation after `v0.2.6`.
+Avorax installer completeness and `v0.2.8` release preparation after `v0.2.6`.
 
 ## Current Commit
 
@@ -58,6 +58,7 @@ Avorax installer completeness and `v0.2.7` release preparation after `v0.2.6`.
 - Hardened Windows MSI/EXE packaging so the MSI payload now requires the Flutter app, local core helper, Guard Service, Avorax Native Engine packs, AI model assets, trust/test/threat assets, Windows driver tooling, protection self-tests, branding/security/performance/ZNE release gates, safe simulator tools, safe threat-intel tooling, complete docs, and an installed `install-manifest.json`.
 - Updated Windows release artifact naming in CI from the old artifact label to `avorax-windows-installers-<version>`.
 - Tightened installer release packaging again so missing `zentor_local_core.exe` or `zentor_guard_service.exe` is a hard build failure by default. `-AllowIncompletePayload` is limited to local diagnostics, and normal MSI/EXE builds install the same complete payload through the MSI chain.
+- Updated the Flutter GitHub release updater defaults and Windows release build defines so Avorax checks `brentishere41848/Avorax` releases by default.
 
 ## Blockers
 
