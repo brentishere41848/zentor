@@ -182,7 +182,7 @@ Scan modes:
 
 - Detect only: Avorax lists suspicious or infected files and does not quarantine or delete anything.
 - Auto-quarantine confirmed threats: Avorax quarantines confirmed signature detections when not allowlisted. Heuristic findings are shown for review.
-- Auto-quarantine all detections: Avorax may quarantine eligible non-low-confidence local detections. Low-confidence heuristic findings remain review-only.
+- Review non-confirmed detections: compatibility mode name retained for older clients, but automatic quarantine is still limited to confirmed threats. Probable, suspicious, and heuristic findings remain review-only unless the user chooses an action.
 
 Scan results are grouped into confirmed threats, probable malware, suspicious items, and low-priority observations. Low-priority observations are hidden by default.
 

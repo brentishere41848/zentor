@@ -49,8 +49,8 @@ class ScanScreen extends ConsumerWidget {
                   ),
                   ButtonSegment(
                     value: ScanActionMode.autoQuarantineAllDetections,
-                    label: Text('Auto quarantine all'),
-                    icon: Icon(Icons.warning_amber_outlined),
+                    label: Text('Review non-confirmed'),
+                    icon: Icon(Icons.rate_review_outlined),
                   ),
                 ],
                 selected: {state.scanActionMode},

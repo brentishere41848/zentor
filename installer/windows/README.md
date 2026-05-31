@@ -44,4 +44,4 @@ The MSI build requires AI model assets. If model metadata is `production_ready=f
 powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.1 -RequireLocalCore -AllowDevelopmentModel
 ```
 
-The Guard Service is not a kernel driver and does not provide true pre-execution blocking by itself. It monitors process starts and can stop/quarantine confirmed or high-confidence threats after launch. True pre-execution blocking still requires the Windows driver validation workflow.
+The Guard Service is not a kernel driver and does not provide true pre-execution blocking by itself. It monitors process starts and can stop/quarantine confirmed threats after launch when the user enables that protection mode. High-confidence non-confirmed detections remain review-only. True pre-execution blocking still requires the Windows driver validation workflow.

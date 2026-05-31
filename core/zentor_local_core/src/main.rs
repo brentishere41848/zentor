@@ -621,13 +621,8 @@ fn native_should_quarantine(action_mode: ScanActionMode, threat: &ThreatResult) 
                 )
         }
         ScanActionMode::AutoQuarantineAllDetections => {
-            matches!(
-                threat.risk_score.verdict,
-                RiskVerdict::ConfirmedMalware | RiskVerdict::ProbableMalware
-            ) && matches!(
-                threat.confidence,
-                ThreatConfidence::Confirmed | ThreatConfidence::High
-            )
+            threat.confidence == ThreatConfidence::Confirmed
+                && matches!(threat.risk_score.verdict, RiskVerdict::ConfirmedMalware)
         }
     }
 }
@@ -1106,6 +1101,86 @@ mod tests {
             .iter()
             .all(|threat| threat.confidence != ThreatConfidence::Confirmed));
         assert_eq!(report.quarantined_files, 0);
+    }
+
+    #[test]
+    fn auto_quarantine_all_mode_does_not_quarantine_high_confidence_probable() {
+        let threat = ThreatResult {
+            id: "review".to_string(),
+            path: "C:\\Users\\Brent\\Downloads\\review.exe".to_string(),
+            file_name: "review.exe".to_string(),
+            sha256: "abc".to_string(),
+            size_bytes: 4,
+            detection_type: DetectionType::Heuristic,
+            threat_category: ThreatCategory::Unknown,
+            threat_name: "Probable Review Item".to_string(),
+            confidence: ThreatConfidence::High,
+            engine: "Avorax Native Engine".to_string(),
+            detected_at: Utc::now(),
+            recommended_action: RecommendedAction::Review,
+            status: ThreatResultStatus::Detected,
+            risk_score: RiskScore {
+                score: 72,
+                verdict: RiskVerdict::ProbableMalware,
+                confidence: ThreatConfidence::High,
+                reasons: vec![RiskReason {
+                    id: "probable_review".to_string(),
+                    title: "Probable review item".to_string(),
+                    detail: "Multiple suspicious indicators require review.".to_string(),
+                    weight: 72,
+                    severity: RiskSeverity::High,
+                    source: RiskReasonSource::Heuristic,
+                }],
+                recommended_action: RecommendedAction::Review,
+                engines_used: vec![RiskEngine::Heuristic],
+            },
+            reason_summary: "Probable malware requires review.".to_string(),
+        };
+
+        assert!(!native_should_quarantine(
+            ScanActionMode::AutoQuarantineAllDetections,
+            &threat
+        ));
+    }
+
+    #[test]
+    fn auto_quarantine_all_mode_still_quarantines_confirmed_malware() {
+        let threat = ThreatResult {
+            id: "confirmed".to_string(),
+            path: "C:\\Users\\Brent\\Downloads\\bad.exe".to_string(),
+            file_name: "bad.exe".to_string(),
+            sha256: "def".to_string(),
+            size_bytes: 4,
+            detection_type: DetectionType::Signature,
+            threat_category: ThreatCategory::Trojan,
+            threat_name: "Confirmed Threat".to_string(),
+            confidence: ThreatConfidence::Confirmed,
+            engine: "Avorax Native Engine".to_string(),
+            detected_at: Utc::now(),
+            recommended_action: RecommendedAction::Quarantine,
+            status: ThreatResultStatus::Detected,
+            risk_score: RiskScore {
+                score: 100,
+                verdict: RiskVerdict::ConfirmedMalware,
+                confidence: ThreatConfidence::Confirmed,
+                reasons: vec![RiskReason {
+                    id: "confirmed_signature".to_string(),
+                    title: "Confirmed signature".to_string(),
+                    detail: "Confirmed malware signature.".to_string(),
+                    weight: 100,
+                    severity: RiskSeverity::Critical,
+                    source: RiskReasonSource::Signature,
+                }],
+                recommended_action: RecommendedAction::Quarantine,
+                engines_used: vec![RiskEngine::Signature],
+            },
+            reason_summary: "Confirmed malware signature.".to_string(),
+        };
+
+        assert!(native_should_quarantine(
+            ScanActionMode::AutoQuarantineAllDetections,
+            &threat
+        ));
     }
 
     #[test]

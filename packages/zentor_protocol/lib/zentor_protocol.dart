@@ -175,7 +175,7 @@ enum ScanActionMode {
     ScanActionMode.autoQuarantineConfirmedOnly =>
       'Auto-quarantine confirmed threats',
     ScanActionMode.autoQuarantineAllDetections =>
-      'Auto-quarantine all detections',
+      'Review non-confirmed detections',
   };
 }
 
