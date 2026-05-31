@@ -3,6 +3,7 @@ param(
   [string]$Configuration = "Release",
   [switch]$SkipFlutterBuild,
   [switch]$RequireLocalCore,
+  [switch]$AllowIncompletePayload,
   [switch]$SkipClamAV,
   [switch]$IncludeClamAVCompatibility,
   [switch]$AllowDevelopmentModel
@@ -332,10 +333,10 @@ if (Test-Path $localCoreExe) {
 if ($coreSource) {
   Copy-Item -LiteralPath $coreSource -Destination (Join-Path $stageDir "zentor_local_core.exe") -Force
   Copy-Item -LiteralPath $coreSource -Destination (Join-Path $releaseDir "zentor_local_core.exe") -Force
-} elseif ($RequireLocalCore) {
-  throw "zentor_local_core.exe was not found. Build it for Windows first or run without -RequireLocalCore."
+} elseif ($RequireLocalCore -or -not $AllowIncompletePayload) {
+  throw "zentor_local_core.exe was not found. Avorax installers must include the local core and Avorax Native Engine runtime. Build it for Windows first or pass -AllowIncompletePayload only for local packaging diagnostics."
 } else {
-  Write-Warning "zentor_local_core.exe was not found. The MSI will install the app, but local malware scanning will show Engine Unavailable until the core is deployed."
+  Write-Warning "zentor_local_core.exe was not found. This diagnostic package will install the app, but local malware scanning will show Engine Unavailable until the core is deployed."
 }
 
 if (Test-Path $guardServiceExeDefault) {
@@ -344,8 +345,10 @@ if (Test-Path $guardServiceExeDefault) {
 } elseif (Test-Path $guardServiceExeWorkspace) {
   Copy-Item -LiteralPath $guardServiceExeWorkspace -Destination (Join-Path $stageDir "zentor_guard_service.exe") -Force
   Copy-Item -LiteralPath $guardServiceExeWorkspace -Destination (Join-Path $releaseDir "zentor_guard_service.exe") -Force
+} elseif (-not $AllowIncompletePayload) {
+  throw "zentor_guard_service.exe was not found. Avorax installers must include and register the Guard Service. Build it for Windows first or pass -AllowIncompletePayload only for local packaging diagnostics."
 } else {
-  Write-Warning "zentor_guard_service.exe was not found. The MSI will not include the real-time Guard helper."
+  Write-Warning "zentor_guard_service.exe was not found. This diagnostic package will not include the real-time Guard helper."
 }
 
 if ($IncludeClamAVCompatibility -and -not $SkipClamAV) {
@@ -401,6 +404,7 @@ $manifest = [ordered]@{
 }
 $manifestPath = Join-Path $stageDir "install-manifest.json"
 ($manifest | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $releaseDir "install-manifest.json") -Force
 
 foreach ($requiredPayload in @(
   @("Avorax.exe", "Flutter desktop client"),
