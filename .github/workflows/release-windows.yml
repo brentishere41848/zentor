@@ -66,6 +66,19 @@ jobs:
       - name: Restore WiX tool
         run: dotnet tool restore
 
+      - name: Validate update signing configuration
+        shell: pwsh
+        env:
+          AVORAX_UPDATE_PUBLIC_KEY_HEX: ${{ secrets.AVORAX_UPDATE_PUBLIC_KEY_HEX }}
+          AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX: ${{ secrets.AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:AVORAX_UPDATE_PUBLIC_KEY_HEX)) {
+            throw "AVORAX_UPDATE_PUBLIC_KEY_HEX secret is required for release builds."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX)) {
+            throw "AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX secret is required to publish signed .aup updates."
+          }
+
       - name: Build Flutter Windows app
         working-directory: apps/zentor_client
         run: flutter build windows --release --build-name "${{ steps.version.outputs.version }}" --build-number "${{ steps.version.outputs.build_number }}" --dart-define=AVORAX_APP_VERSION="${{ steps.version.outputs.version }}" --dart-define=ZENTOR_APP_VERSION="${{ steps.version.outputs.version }}" --dart-define=AVORAX_UPDATE_FEED_URL=https://github.com/brentishere41848/Avorax/releases/latest/download/update-feed.json --dart-define=AVORAX_UPDATE_CHANNEL=dev --dart-define=AVORAX_UPDATES_REPO_OWNER=brentishere41848 --dart-define=AVORAX_UPDATES_REPO_NAME=Avorax
@@ -111,6 +124,24 @@ jobs:
             throw
           }
 
+      - name: Build signed update package
+        shell: pwsh
+        env:
+          AVORAX_UPDATE_PUBLIC_KEY_ID: avorax-prod-ed25519
+          AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX: ${{ secrets.AVORAX_UPDATE_SIGNING_PRIVATE_KEY_HEX }}
+        run: |
+          $signer = Join-Path $PWD "dist\sign-update-manifest.ps1"
+          @'
+          param(
+            [Parameter(Mandatory = $true)][string]$ManifestPath,
+            [Parameter(Mandatory = $true)][string]$SignaturePath
+          )
+          cargo run --manifest-path core/avorax_update_service/Cargo.toml --bin avorax_sign_manifest -- $ManifestPath $SignaturePath
+          exit $LASTEXITCODE
+          '@ | Set-Content -LiteralPath $signer -Encoding UTF8
+          $env:AVORAX_UPDATE_SIGNER = $signer
+          .\tools\update\avorax-build-update-package.ps1 -Version "${{ steps.version.outputs.version }}" -Channel "dev"
+
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -118,6 +149,8 @@ jobs:
           path: |
             dist/Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
             dist/Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe
+            dist/updates/Avorax-AntiVirus-${{ steps.version.outputs.version }}.aup
+            dist/updates/update-feed.json
           if-no-files-found: error
 
       - name: Publish GitHub release
@@ -133,8 +166,12 @@ jobs:
             Assets:
             - Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
             - Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe
+            - Avorax-AntiVirus-${{ steps.version.outputs.version }}.aup
+            - update-feed.json
 
             The current bundled AI model may be marked as a development model in its metadata. Avorax must not claim production AI protection unless `production_ready=true`.
           files: |
             dist/Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64.msi
             dist/Avorax-AntiVirus-${{ steps.version.outputs.version }}-x64-setup.exe
+            dist/updates/Avorax-AntiVirus-${{ steps.version.outputs.version }}.aup
+            dist/updates/update-feed.json

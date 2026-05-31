@@ -108,7 +108,13 @@ $manifest = [ordered]@{
 $manifestPath = Join-Path $work "manifest.json"
 $sigPath = Join-Path $work "manifest.sig"
 ($manifest | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-& $SignerCommand $manifestPath $sigPath
+$signer = $SignerCommand -split " "
+$signerExe = $signer[0]
+$signerArgs = @()
+if ($signer.Count -gt 1) {
+  $signerArgs = $signer[1..($signer.Count - 1)]
+}
+& $signerExe @signerArgs $manifestPath $sigPath
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sigPath)) {
   throw "Update manifest signing failed. No .aup package was produced."
 }
