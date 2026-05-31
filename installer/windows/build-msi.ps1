@@ -608,7 +608,7 @@ $installReport = [ordered]@{
 $programDataSubdirs = @("config", "logs", "events", "quarantine", "scans", "cache", "reports", "migration")
 $programDataXml = New-Object System.Text.StringBuilder
 $programDataRefsXml = New-Object System.Text.StringBuilder
-[void]$programDataXml.AppendLine("    <StandardDirectory Id=`"ProgramDataFolder`">")
+[void]$programDataXml.AppendLine("    <StandardDirectory Id=`"CommonAppDataFolder`">")
 [void]$programDataXml.AppendLine("      <Directory Id=`"AvoraxProgramDataFolder`" Name=`"Avorax`">")
 foreach ($dir in $programDataSubdirs) {
   [void]$programDataXml.AppendLine("        <Directory Id=`"AvoraxData_$dir`" Name=`"$dir`" />")
@@ -621,9 +621,10 @@ foreach ($dir in $programDataSubdirs) {
   [void]$programDataXml.AppendLine("      <Component Id=`"$componentId`" Guid=`"*`">")
   [void]$programDataXml.AppendLine("        <CreateFolder />")
   if ($dir -eq "reports") {
-    [void]$programDataXml.AppendLine("        <File Id=`"AvoraxInstallReportFile`" Source=`"$(XmlEscape $installReportSource)`" Name=`"install_report.json`" />")
+    [void]$programDataXml.AppendLine("        <File Id=`"AvoraxInstallReportFile`" Source=`"$(XmlEscape $installReportSource)`" Name=`"install_report.json`" KeyPath=`"yes`" />")
+  } else {
+    [void]$programDataXml.AppendLine("        <RegistryValue Root=`"HKLM`" Key=`"Software\Avorax\ProgramData`" Name=`"$dir`" Type=`"integer`" Value=`"1`" KeyPath=`"yes`" />")
   }
-  [void]$programDataXml.AppendLine("        <RegistryValue Root=`"HKLM`" Key=`"Software\Avorax\ProgramData`" Name=`"$dir`" Type=`"integer`" Value=`"1`" KeyPath=`"yes`" />")
   [void]$programDataXml.AppendLine("      </Component>")
   [void]$programDataXml.AppendLine("    </DirectoryRef>")
   [void]$programDataRefsXml.AppendLine("      <ComponentRef Id=`"$componentId`" />")
