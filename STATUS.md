@@ -53,6 +53,7 @@ Avorax rebrand and confirmed-threat Guard policy hardening after `v0.2.5`.
 - Tightened application-control quarantine policy so probable/high-risk review items are monitored in Block Confirmed and Monitor Only modes, blocked for user approval in Lockdown Mode, and not automatically quarantined or labeled as malware unless the evidence is confirmed.
 - Updated protection-mode copy so Block Confirmed Threats describes automatic stop/quarantine for confirmed threats only.
 - Restricted legacy "auto quarantine all detections" scan/action compatibility paths so they still quarantine only confirmed threats; probable, suspicious, high-confidence, and heuristic detections remain review-only unless a user manually chooses quarantine.
+- Added explicit Avorax Guard Service mode parsing through `AVORAX_GUARD_MODE` / `AVORAX_PROTECTION_MODE`, so background post-launch stop/quarantine honors disabled and monitor-only deployments instead of hardcoding blocking mode.
 
 ## Blockers
 

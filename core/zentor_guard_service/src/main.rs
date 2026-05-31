@@ -205,6 +205,7 @@ fn handle(command: GuardCommand) -> GuardEvent {
                 "guard": "ready",
                 "driver": driver_health::DriverHealth::probe(),
                 "policy": preexecution_policy::PreExecutionPolicy::default(),
+                "configured_guard_mode": configured_guard_mode(),
                 "known_bad_hashes": known_bad_cache::load_known_bad_hashes().len(),
                 "post_launch_fallback": true,
             }))
@@ -486,6 +487,7 @@ fn watch_processes_until_shutdown(
         .map(|process| process.process_id)
         .collect();
     let mut cache: HashMap<PathBuf, String> = HashMap::new();
+    let protection_mode = configured_guard_mode();
 
     loop {
         if shutdown_rx.try_recv().is_ok() {
@@ -523,7 +525,7 @@ fn watch_processes_until_shutdown(
                     Some(process.process_id),
                     &process.path,
                     known_malicious_hashes,
-                    preexecution_policy::DriverProtectionMode::BlockConfirmedThreats,
+                    protection_mode.clone(),
                 ) {
                     Ok(event) => {
                         let _ = write_guard_event(&event);
@@ -540,6 +542,39 @@ fn watch_processes_until_shutdown(
         }
 
         thread::sleep(Duration::from_millis(poll_interval_ms.max(100)));
+    }
+}
+
+fn configured_guard_mode() -> preexecution_policy::DriverProtectionMode {
+    std::env::var("AVORAX_GUARD_MODE")
+        .or_else(|_| std::env::var("AVORAX_PROTECTION_MODE"))
+        .or_else(|_| std::env::var("ZENTOR_GUARD_MODE"))
+        .ok()
+        .and_then(|value| parse_guard_mode(&value))
+        .unwrap_or_default()
+}
+
+fn parse_guard_mode(raw: &str) -> Option<preexecution_policy::DriverProtectionMode> {
+    let normalized = raw
+        .trim()
+        .replace(['-', '_', ' '], "")
+        .to_ascii_lowercase();
+    match normalized.as_str() {
+        "off" | "disabled" => Some(preexecution_policy::DriverProtectionMode::Disabled),
+        "observeonly" | "monitoronly" => {
+            Some(preexecution_policy::DriverProtectionMode::ObserveOnly)
+        }
+        "balanced" => Some(preexecution_policy::DriverProtectionMode::Balanced),
+        "blockknownbad" => Some(preexecution_policy::DriverProtectionMode::BlockKnownBad),
+        "blockconfirmedthreats" | "blockconfirmed" => {
+            Some(preexecution_policy::DriverProtectionMode::BlockConfirmedThreats)
+        }
+        "lockdown" => Some(preexecution_policy::DriverProtectionMode::Lockdown),
+        "developermode" | "developer" => {
+            Some(preexecution_policy::DriverProtectionMode::DeveloperMode)
+        }
+        "aggressive" => Some(preexecution_policy::DriverProtectionMode::Aggressive),
+        _ => None,
     }
 }
 
@@ -1185,6 +1220,42 @@ mod tests {
         .unwrap();
         assert_eq!(result.action, "watchCompleted");
         assert!(result.ok);
+    }
+
+    #[test]
+    fn guard_mode_parser_accepts_user_visible_modes() {
+        assert_eq!(
+            parse_guard_mode("monitorOnly"),
+            Some(preexecution_policy::DriverProtectionMode::ObserveOnly)
+        );
+        assert_eq!(
+            parse_guard_mode("Block Confirmed Threats"),
+            Some(preexecution_policy::DriverProtectionMode::BlockConfirmedThreats)
+        );
+        assert_eq!(
+            parse_guard_mode("disabled"),
+            Some(preexecution_policy::DriverProtectionMode::Disabled)
+        );
+        assert_eq!(
+            parse_guard_mode("lockdown"),
+            Some(preexecution_policy::DriverProtectionMode::Lockdown)
+        );
+    }
+
+    #[test]
+    fn configured_guard_mode_uses_avorax_environment() {
+        let _lock = env_lock();
+        std::env::remove_var("AVORAX_PROTECTION_MODE");
+        std::env::remove_var("ZENTOR_GUARD_MODE");
+        std::env::set_var("AVORAX_GUARD_MODE", "monitorOnly");
+
+        assert_eq!(
+            configured_guard_mode(),
+            preexecution_policy::DriverProtectionMode::ObserveOnly
+        );
+
+        std::env::remove_var("AVORAX_GUARD_MODE");
+        std::env::remove_var("AVORAX_PROTECTION_MODE");
     }
 
     #[test]
