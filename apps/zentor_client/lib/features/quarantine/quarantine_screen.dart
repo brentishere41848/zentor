@@ -105,7 +105,17 @@ class QuarantineScreen extends ConsumerWidget {
                           secondary: true,
                           onPressed:
                               item.status == QuarantineItemStatus.quarantined
-                              ? () => controller.restoreQuarantineItem(item)
+                              ? () async {
+                                  final confirmed = await _confirmQuarantineAction(
+                                    context,
+                                    title: 'Restore quarantined file?',
+                                    message:
+                                        'Avorax will move this file back to its original location when possible. Only restore files you trust.',
+                                    confirmLabel: 'Restore file',
+                                  );
+                                  if (!confirmed) return;
+                                  await controller.restoreQuarantineItem(item);
+                                }
                               : null,
                         ),
                         ZentorButton(
@@ -114,15 +124,22 @@ class QuarantineScreen extends ConsumerWidget {
                           secondary: true,
                           onPressed:
                               item.status == QuarantineItemStatus.quarantined
-                              ? () => controller.deleteQuarantineItem(item)
+                              ? () async {
+                                  final confirmed = await _confirmQuarantineAction(
+                                    context,
+                                    title:
+                                        'Delete quarantined file permanently?',
+                                    message:
+                                        'This permanently deletes the isolated quarantine payload. This cannot be undone by Avorax.',
+                                    confirmLabel: 'Delete permanently',
+                                    destructive: true,
+                                  );
+                                  if (!confirmed) return;
+                                  await controller.deleteQuarantineItem(item);
+                                }
                               : null,
                         ),
-                        ZentorButton(
-                          label: 'Keep quarantined',
-                          icon: Icons.inventory_2_outlined,
-                          secondary: true,
-                          onPressed: null,
-                        ),
+                        const _MetaChip('Default', 'kept isolated'),
                       ],
                     ),
                   ],
@@ -139,6 +156,36 @@ class QuarantineScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<bool> _confirmQuarantineAction(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  bool destructive = false,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: destructive
+              ? FilledButton.styleFrom(backgroundColor: ZentorColors.danger)
+              : null,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(confirmLabel),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
 
 class _MetaChip extends StatelessWidget {

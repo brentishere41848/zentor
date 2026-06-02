@@ -87,7 +87,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               _ValueRow(
                 'Rollback',
-                state.updateInfo!.rollbackSupported ? 'Available' : 'Unavailable',
+                state.updateInfo!.rollbackSupported
+                    ? 'Available'
+                    : 'Unavailable',
               ),
             ],
             if (state.updateError != null)
@@ -290,26 +292,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 style: TextStyle(color: ZentorColors.textSecondary),
               ),
               value: _developerOptions,
-              onChanged: (value) => setState(() => _developerOptions = value),
+              onChanged: (value) async {
+                setState(() => _developerOptions = value);
+                if (!value && state.config.developerOverrideEnabled) {
+                  await _saveDeveloperOverride(controller, enabled: false);
+                }
+              },
             ),
-            if (_developerOptions) ...[
-              ZentorTextField(controller: _endpoint, label: 'API endpoint'),
-              const SizedBox(height: 12),
-              ZentorTextField(controller: _projectId, label: 'Project ID'),
-              const SizedBox(height: 12),
-              ZentorTextField(
-                controller: _publicKey,
-                label: 'Public Client Key',
-              ),
-              const SizedBox(height: 12),
+            if (_developerOptions || state.config.developerOverrideEnabled) ...[
+              if (_developerOptions) ...[
+                ZentorTextField(controller: _endpoint, label: 'API endpoint'),
+                const SizedBox(height: 12),
+                ZentorTextField(controller: _projectId, label: 'Project ID'),
+                const SizedBox(height: 12),
+                ZentorTextField(
+                  controller: _publicKey,
+                  label: 'Public Client Key',
+                ),
+                const SizedBox(height: 12),
+              ],
               ZentorButton(
-                label: 'Save developer override',
-                icon: Icons.save_outlined,
-                onPressed: () => controller.saveDeveloperCloudOverride(
+                label: _developerOptions
+                    ? 'Save developer override'
+                    : 'Disable developer override',
+                icon: _developerOptions
+                    ? Icons.save_outlined
+                    : Icons.cloud_off_outlined,
+                onPressed: () => _saveDeveloperOverride(
+                  controller,
                   enabled: _developerOptions,
-                  apiBaseUrl: _endpoint.text,
-                  projectId: _projectId.text,
-                  publicClientKey: _publicKey.text,
                 ),
               ),
             ],
@@ -326,13 +337,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: 'Export logs',
                   icon: Icons.download_outlined,
                   secondary: true,
-                  onPressed: controller.exportLogs,
+                  onPressed: () => _exportLogs(controller),
                 ),
                 ZentorButton(
                   label: 'Reset configuration',
                   icon: Icons.restart_alt,
                   secondary: true,
-                  onPressed: controller.resetConfiguration,
+                  onPressed: () => _confirmResetConfiguration(controller),
                 ),
               ],
             ),
@@ -340,6 +351,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _saveDeveloperOverride(
+    ZentorController controller, {
+    required bool enabled,
+  }) async {
+    await controller.saveDeveloperCloudOverride(
+      enabled: enabled,
+      apiBaseUrl: _endpoint.text,
+      projectId: _projectId.text,
+      publicClientKey: _publicKey.text,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Developer cloud override saved.'
+              : 'Developer cloud override disabled.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportLogs(ZentorController controller) async {
+    try {
+      final path = await controller.exportLogs();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Logs exported to $path')));
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to export logs: $error')));
+    }
+  }
+
+  Future<void> _confirmResetConfiguration(ZentorController controller) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset configuration?'),
+        content: const Text(
+          'This resets local Avorax settings back to defaults. Security event logs are kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await controller.resetConfiguration();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Configuration reset.')));
   }
 }
 

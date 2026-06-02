@@ -1,0 +1,149 @@
+# Avorax Hardening Run Log
+
+## Session scope
+
+Lead-engineer product-hardening pass across the Avorax repository. Goal is to move Avorax toward a professional, reliable, secure, honest endpoint protection product through documented architecture, prioritized backlog, tests, and incremental implementation.
+
+## Professional assumptions
+
+- Current repository path is `C:\Users\Brent\Downloads\pasus_anti-virus-main\pasus_anti-virus-main`.
+- The active product is Avorax. Historical/internal `zentor_*` names remain in code paths and crate/package names.
+- The product must remain defensive only. No real malware samples, destructive behavior, stealth, evasion, or unsupported security claims are acceptable.
+- The signed Windows driver path is not assumed active unless a validation report proves it is installed, running, communicating, and self-tested.
+- The bundled native ML model is treated as development-only unless release metadata and gates prove production readiness.
+- MSI/EXE installers are first-install/repair/recovery/offline paths. Normal in-app updates should use verified `.aup` packages.
+
+## Repository inspection summary
+
+### Languages and frameworks
+
+- Flutter/Dart client in `apps/zentor_client`.
+- Rust workspace in root `Cargo.toml` with crates under `core/` and `services/api/`.
+- Dart shared packages under `packages/`.
+- PowerShell + WiX Windows installer/update/release tooling.
+- Optional Docker/Postgres/Redis infrastructure under `infra/`.
+
+### Key product areas inspected
+
+- UI shell, routes, Dashboard, Scan, Protection, Quarantine, Settings, Logs, Updates, shared widgets.
+- App state/controller, local core IPC, scan target selection, config persistence, logging, update service.
+- Native engine signatures, rules, heuristics, trust, verdict fusion, quarantine, quick/full planners.
+- Local core scan command surface, allowlist, protection modules, quarantine store.
+- Guard service driver IPC, process monitoring, pre-execution policy, driver self-test paths.
+- Update service package verification, hash/signature validation, staging/apply/rollback code.
+- README, STATUS, docs, installer scripts, security/release gates, CI workflows.
+
+## Prioritized work plan
+
+### P0
+
+- Keep project buildable/testable.
+- Create/update `TODO.md`, `RUN_LOG.md`, `ARCHITECTURE.md`, `SECURITY_MODEL.md`.
+- Fix stale Flutter scan errors after successful scans.
+- Harden local event loading against corrupt JSON.
+- Add focused tests for those safety fixes.
+- Add or preserve basic scan/quarantine tests.
+- Remove/hide unsupported UI claims or dead controls where touched.
+
+### P1
+
+- Improve Quick Scan and Full Scan target selection/testability.
+- Improve local core IPC diagnostics and timeout handling.
+- Improve settings persistence and reset/override UX safety.
+- Improve logging/report export behavior.
+- Refresh stale docs and release runbooks.
+
+### P2
+
+- Wire real best-effort user-mode real-time monitoring into local core start/stop commands.
+- Add debounce/stable-file/retry/unchanged-file cache tests.
+- Harden guard IPC publisher/signature trust boundary.
+- Improve ransomware protected folder UX and harmless simulation tests.
+
+### P3
+
+- Cache native engine in guard path and stream large-file hashing.
+- Improve update atomic apply/rollback.
+- Enforce production update signing policy.
+- Expand CI/release gates.
+
+### P4
+
+- Plugin/rule provider interface.
+- Optional disabled cloud reputation provider.
+- Accessibility/localization-ready UI pass.
+- Exportable support report bundles.
+- Performance benchmarks.
+
+## Completed changes in this session
+
+- Created `TODO.md` with P0-P4 product-hardening backlog and safe operating rules.
+- Created `ARCHITECTURE.md` documenting repository layout, runtime architecture, scan flow, detection engine, quarantine, protection, updates, and build/test systems.
+- Created `SECURITY_MODEL.md` documenting goals, non-goals, trust boundaries, scan safety, detection/action policy, quarantine safety, updates, logging/privacy, known limitations, and safe development rules.
+- Created this `RUN_LOG.md` to preserve assumptions, inspection findings, work plan, completed changes, tests, limitations, and next tasks.
+
+## Tests and checks run so far
+
+- Repository inspection commands and file reads.
+- `git status --short --branch`.
+- Toolchain discovery:
+  - Cargo available at `C:\Users\Brent\.cargo\bin\cargo`, version `1.96.0`.
+  - Flutter SDK exists at `C:\Users\Brent\develop\flutter\bin` but is not currently on Git Bash `PATH`.
+  - PowerShell is available.
+
+## Known limitations / blockers
+
+- Flutter is not on shell `PATH`; use `C:\Users\Brent\develop\flutter\bin\flutter.bat` when running Flutter checks from this environment.
+- Some Windows service/update tests may require elevation and can fail with Windows elevation error 740 in a non-elevated shell.
+- Driver validation requires a signed/installed/self-tested driver report and cannot be assumed complete.
+- `packages/avorax_protocol` currently lacks `package:test` dev dependency, so `dart test` expectations for it need cleanup or dependency additions.
+- Existing working tree had `AGENTS.md` modified before this implementation pass began.
+
+## Files modified in this session
+
+- `TODO.md`
+- `ARCHITECTURE.md`
+- `SECURITY_MODEL.md`
+- `RUN_LOG.md`
+
+## Additional implementation completed
+
+- Hardened `LocalEventRepository.load` to recover from corrupt JSON and skip invalid records.
+- Hardened Flutter scan state handling so stale engine errors clear after successful scans and cancelled scans do not keep receiving progress updates.
+- Reworked `ScanTargetService` with platform-specific, testable quick/full target planning.
+- Added Flutter tests for corrupt event log recovery, quick/full scan target planning, stale error clearing, and scan orchestration invariants.
+- Hardened Rust quarantine store listing/restore/delete behavior around corrupt metadata and unsafe payload paths.
+- Added Rust quarantine lifecycle tests for restore confirmation, duplicate restore naming, delete confirmation, corrupt metadata, and payload path validation.
+- Improved Settings UX with reset confirmation, log-export feedback, and clean developer override disable behavior.
+- Improved Dashboard/Protection/Scan/Quarantine UI copy and states to avoid unsupported claims and dead controls.
+- Added quarantine restore/delete confirmation dialogs in the Flutter UI.
+- Added visual policy tests for quarantine destructive-action confirmation and protection service-state honesty.
+- Added `TESTING.md` and `CHANGELOG.md`, and linked engineering docs from `README.md`.
+- Updated `STATUS.md` with current hardening work, verification, and blockers.
+- Added best-effort user-mode watcher planning/evaluation for requested existing directories, debounce waiting, stable-file retry, unchanged-file scan suppression, and monitor-only review observations.
+- Added Rust tests for `start_watch` command output and watcher debounce/cache/monitor-only behavior.
+- Added Flutter IPC diagnostics tests for missing core executable, non-zero exit with stderr, malformed JSON, timeout/kill, and health-summary recovery messaging.
+- Wired Flutter protection startup/shutdown to local core `start_watch` / `stop_watch`, stores watched paths/mode in app state, keeps selected protected app paths in scan/watch paths, and labels `userModeBestEffort` as honest best-effort user-mode monitoring in the Protection screen.
+
+## Final verification in this pass
+
+- `cd apps/zentor_client && C:\Users\Brent\develop\flutter\bin\flutter.bat analyze` passed with no issues.
+- `cd apps/zentor_client && C:\Users\Brent\develop\flutter\bin\flutter.bat test` passed 34 tests after IPC diagnostics and protection watcher UI wiring.
+- `cd apps/zentor_client && C:\Users\Brent\develop\flutter\bin\flutter.bat build windows --debug` produced `build\windows\x64\runner\Debug\Avorax.exe`.
+- `powershell -ExecutionPolicy Bypass -File installer/windows/build-msi.ps1 -Version 0.2.15 -RequireLocalCore -AllowDevelopmentModel` produced `dist\Avorax-AntiVirus-0.2.15-x64.msi` and `dist\Avorax-AntiVirus-0.2.15-x64-setup.exe`.
+- `powershell -ExecutionPolicy Bypass -File tools/windows/avorax-installer-stage-test.ps1 -StagePath dist/windows-msi/stage` passed; staged core health reported native engine `ready`, 17 signatures, 11 rules, development ML loaded, and native self-test true.
+- `cargo test --manifest-path core/zentor_local_core/Cargo.toml` passed 64 tests after user-mode watcher additions.
+- `cargo test --manifest-path core/zentor_guard_service/Cargo.toml` passed 19 tests.
+- `cd packages/zentor_protocol && C:\Users\Brent\develop\flutter\bin\dart.bat test` passed 4 tests.
+
+## Current blockers
+
+- `cargo test --manifest-path core/zentor_native_engine/Cargo.toml` is blocked by Microsoft Defender error 225 on the generated test executable because the native-engine crate contains antivirus-style synthetic fixtures/signatures.
+- Signed driver validation remains unavailable in this environment, so kernel/pre-execution protection cannot be claimed verified.
+- Update-service elevated tests and full release gates still require an elevated/provisioned Windows release environment.
+
+## Recommended next work
+
+1. Harden guard-service IPC trust boundary so caller-provided publisher/signature fields cannot bypass policy unless verified by a trusted driver/service path.
+2. Add ransomware protected-folder settings, allowlist validation, and harmless simulation tests.
+3. Run full release gates in a provisioned elevated Windows environment before tagging a new release.

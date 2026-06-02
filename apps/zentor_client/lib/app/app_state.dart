@@ -91,6 +91,8 @@ class ZentorState {
     this.enginePathsChecked = const [],
     this.programDataDirectory,
     this.lastEngineError,
+    this.realtimeWatcherMode = 'off',
+    this.realtimeWatchedPaths = const [],
     this.scanStatus = ScanStatus.idle,
     this.scanActionMode = ScanActionMode.detectOnly,
     this.scanProgress,
@@ -134,6 +136,8 @@ class ZentorState {
   final List<String> enginePathsChecked;
   final String? programDataDirectory;
   final String? lastEngineError;
+  final String realtimeWatcherMode;
+  final List<String> realtimeWatchedPaths;
   final ScanStatus scanStatus;
   final ScanActionMode scanActionMode;
   final ScanProgress? scanProgress;
@@ -178,6 +182,8 @@ class ZentorState {
     List<String>? enginePathsChecked,
     String? programDataDirectory,
     String? lastEngineError,
+    String? realtimeWatcherMode,
+    List<String>? realtimeWatchedPaths,
     ScanStatus? scanStatus,
     ScanActionMode? scanActionMode,
     ScanProgress? scanProgress,
@@ -234,6 +240,8 @@ class ZentorState {
       enginePathsChecked: enginePathsChecked ?? this.enginePathsChecked,
       programDataDirectory: programDataDirectory ?? this.programDataDirectory,
       lastEngineError: lastEngineError ?? this.lastEngineError,
+      realtimeWatcherMode: realtimeWatcherMode ?? this.realtimeWatcherMode,
+      realtimeWatchedPaths: realtimeWatchedPaths ?? this.realtimeWatchedPaths,
       scanStatus: scanStatus ?? this.scanStatus,
       scanActionMode: scanActionMode ?? this.scanActionMode,
       scanProgress: clearScanProgress
@@ -591,6 +599,7 @@ class ZentorController extends StateNotifier<ZentorState> {
   Future<void> selectDetectedApp(DetectedApp app) async {
     final updated = state.config.copyWith(
       protectedAppConfig: app.toProtectedAppConfig(),
+      scanPaths: {...state.config.scanPaths, app.path}.toList(),
     );
     await _configRepository.save(updated);
     await logEvent(
@@ -688,6 +697,13 @@ class ZentorController extends StateNotifier<ZentorState> {
     }
   }
 
+  List<String> _realtimeWatchPaths() {
+    final candidates = <String>{...state.config.scanPaths};
+    final appPath = state.config.protectedAppConfig.appPath.trim();
+    if (appPath.isNotEmpty) candidates.add(appPath);
+    return candidates.where((path) => Directory(path).existsSync()).toList();
+  }
+
   Future<void> startProtection() async {
     await logEvent('protection_start_requested', 'Protection start requested');
     state = state.copyWith(
@@ -705,16 +721,32 @@ class ZentorController extends StateNotifier<ZentorState> {
       final modeConfigured = await _localCoreClient.configureGuardMode(
         state.config.protectionMode,
       );
-      await logEvent('protection_started', 'Protection started');
+      final watchPaths = _realtimeWatchPaths();
+      final watcher = watchPaths.isEmpty
+          ? const RealtimeWatcherState(active: false, mode: 'off')
+          : await _localCoreClient.startWatch(watchPaths);
+      await logEvent(
+        'protection_started',
+        'Protection started',
+        details: watcher.active
+            ? 'Watcher ${watcher.mode}: ${watcher.watchedPaths.join('; ')}'
+            : 'Watcher not active',
+      );
+      final modeWarning = modeConfigured
+          ? null
+          : 'Avorax could not write the shared Guard mode config. Existing service mode may remain active until the service is restarted or configured by installer.';
+      final watcherWarning = watchPaths.isNotEmpty && !watcher.active
+          ? 'Real-time folder monitoring did not start${watcher.error == null ? '' : ': ${watcher.error}'}.'
+          : null;
       state = state.copyWith(
         protectionStatus: state.driverStatus == 'running'
             ? ProtectionStatus.protected
             : ProtectionStatus.partiallyProtected,
         loading: false,
-        clearError: modeConfigured,
-        errorMessage: modeConfigured
-            ? null
-            : 'Protection started, but Avorax could not write the shared Guard mode config. Existing service mode may remain active until the service is restarted or configured by installer.',
+        realtimeWatcherMode: watcher.mode,
+        realtimeWatchedPaths: watcher.watchedPaths,
+        clearError: modeConfigured && watcherWarning == null,
+        errorMessage: [?modeWarning, ?watcherWarning].join(' '),
       );
       return;
     }
@@ -740,11 +772,14 @@ class ZentorController extends StateNotifier<ZentorState> {
     final modeConfigured = await _localCoreClient.configureGuardMode(
       ProtectionMode.off,
     );
+    final watcher = await _localCoreClient.stopWatch();
     await logEvent('protection_stopped', 'Protection stopped');
     state = state.copyWith(
       clearProtectionRun: true,
       protectionStatus: ProtectionStatus.idle,
       heartbeat: const HeartbeatStatus(),
+      realtimeWatcherMode: watcher.mode,
+      realtimeWatchedPaths: watcher.watchedPaths,
       clearError: modeConfigured,
       errorMessage: modeConfigured
           ? null
@@ -1163,19 +1198,25 @@ class ZentorController extends StateNotifier<ZentorState> {
             paths.first,
             kind: kind,
             actionMode: actionMode,
-            onProgress: (progress) => state = state.copyWith(
-              scanProgress: progress,
-              currentScanPath: progress.currentPath,
-            ),
+            onProgress: (progress) {
+              if (!mounted || _scanCancelled) return;
+              state = state.copyWith(
+                scanProgress: progress,
+                currentScanPath: progress.currentPath,
+              );
+            },
           )
         : await _localCoreClient.scanPaths(
             paths,
             kind: kind,
             actionMode: actionMode,
-            onProgress: (progress) => state = state.copyWith(
-              scanProgress: progress,
-              currentScanPath: progress.currentPath,
-            ),
+            onProgress: (progress) {
+              if (!mounted || _scanCancelled) return;
+              state = state.copyWith(
+                scanProgress: progress,
+                currentScanPath: progress.currentPath,
+              );
+            },
           );
     if (_scanCancelled) {
       state = state.copyWith(
@@ -1209,6 +1250,7 @@ class ZentorController extends StateNotifier<ZentorState> {
       scanStatus: report.status,
       lastScanReport: report,
       clearCurrentScanPath: true,
+      clearError: report.status != ScanStatus.engineUnavailable,
       errorMessage: report.status == ScanStatus.engineUnavailable
           ? _engineUnavailableMessage()
           : null,

@@ -198,12 +198,6 @@ class _LiveProgress extends StatelessWidget {
             spacing: 10,
             children: [
               ZentorButton(
-                label: 'Pause',
-                icon: Icons.pause_outlined,
-                secondary: true,
-                onPressed: null,
-              ),
-              ZentorButton(
                 label: 'Cancel',
                 icon: Icons.close_outlined,
                 secondary: true,
@@ -496,13 +490,13 @@ class _EngineUnavailableDiagnostics extends StatelessWidget {
   }
 
   String _serviceStatusLabel(String status) => switch (status) {
-        'running' => 'Running',
-        'stopped' => 'Stopped',
-        'missing' => 'Missing',
-        'installed' => 'Installed',
-        'unsupported' => 'Unsupported on this OS',
-        _ => 'Unknown',
-      };
+    'running' => 'Running',
+    'stopped' => 'Stopped',
+    'missing' => 'Missing',
+    'installed' => 'Installed',
+    'unsupported' => 'Unsupported on this OS',
+    _ => 'Unknown',
+  };
 }
 
 class _DiagnosticChip extends StatelessWidget {

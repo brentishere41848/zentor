@@ -59,9 +59,17 @@ class ProtectionScreen extends ConsumerWidget {
                 runSpacing: 12,
                 children: [
                   ZentorButton(
-                    label: 'Enable Protection',
+                    label:
+                        state.protectionStatus == ProtectionStatus.idle ||
+                            state.protectionStatus == ProtectionStatus.error
+                        ? 'Enable Protection'
+                        : 'Protection Enabled',
                     icon: Icons.play_arrow_rounded,
-                    onPressed: state.loading
+                    onPressed:
+                        state.loading ||
+                            (state.protectionStatus != ProtectionStatus.idle &&
+                                state.protectionStatus !=
+                                    ProtectionStatus.error)
                         ? null
                         : controller.startProtection,
                   ),
@@ -121,8 +129,18 @@ class ProtectionScreen extends ConsumerWidget {
                     ? 'Cloud is optional; local protection remains available.'
                     : state.guardStatus == 'running'
                     ? 'Avorax Guard Service is running. Confirmed threats can be stopped after launch.'
-                    : 'Guard Service is not running. Manual scans and quarantine remain available.',
+                    : state.coreServiceStatus == 'running'
+                    ? 'Core service is running. Start Guard Service for background monitoring.'
+                    : 'Core/Guard services are not running. Manual scans and quarantine remain available.',
                 icon: Icons.shield_outlined,
+              ),
+              ZentorMetricCard(
+                title: 'User-mode monitor',
+                value: _watcherLabel(state.realtimeWatcherMode),
+                detail: state.realtimeWatchedPaths.isEmpty
+                    ? 'Best-effort folder monitoring is off. Manual scans and quarantine remain available.'
+                    : 'Running best-effort folder monitoring for ${state.realtimeWatchedPaths.length} protected location(s). No kernel pre-execution blocking is claimed.',
+                icon: Icons.folder_special_outlined,
               ),
               ZentorMetricCard(
                 title: 'Guard Service',
@@ -223,7 +241,7 @@ class _ProtectionChecklist extends StatelessWidget {
       _CheckRow('Signature Pack', '${state.nativeSignatureCount} loaded'),
       _CheckRow('Rule Pack', '${state.nativeRuleCount} loaded'),
       _CheckRow('Quarantine', 'Ready'),
-      _CheckRow('Core Service', 'Running'),
+      _CheckRow('Core Service', _serviceLabel(state.coreServiceStatus)),
       _CheckRow('Guard Service', _guardLabel(state.guardStatus)),
       _CheckRow(
         'Pre-execution Driver',
@@ -285,6 +303,12 @@ String _protectionExplanation(ZentorState state) {
   return 'Avorax shows exactly which local protection components are ready, degraded, or unavailable. Cloud disabled is optional and does not reduce local scan protection.';
 }
 
+String _watcherLabel(String mode) => switch (mode) {
+  'userModeBestEffort' => 'Best-effort',
+  'off' => 'Off',
+  _ => 'Unavailable',
+};
+
 String _guardLabel(String status) => switch (status) {
   'running' => 'Running',
   'stopped' => 'Stopped',
@@ -293,6 +317,14 @@ String _guardLabel(String status) => switch (status) {
   'blockConfirmedThreats' => 'Block confirmed threats',
   'aggressive' => 'Aggressive',
   _ => 'Off',
+};
+
+String _serviceLabel(String status) => switch (status) {
+  'running' => 'Running',
+  'installed' => 'Installed',
+  'stopped' => 'Stopped',
+  'missing' => 'Missing',
+  _ => 'Unknown',
 };
 
 String _mlLabel(String status) => switch (status) {

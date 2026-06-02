@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,15 +20,24 @@ class LocalEventRepository {
     if (raw == null || raw.isEmpty) {
       return const [];
     }
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) {
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const [];
+      }
+      return decoded
+          .whereType<Map>()
+          .map((item) => LocalEvent.fromJson(Map<String, Object?>.from(item)))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } on Object {
+      // Local event history is useful but not security-critical. Treat a
+      // malformed/corrupt SharedPreferences value as recoverable so logs,
+      // dashboard startup, and scan actions keep working.
+      unawaited(_preferences.remove(_eventsKey));
       return const [];
     }
-    return decoded
-        .whereType<Map>()
-        .map((item) => LocalEvent.fromJson(Map<String, Object?>.from(item)))
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   Future<LocalEvent> add(String type, String message, {String? details}) async {

@@ -76,7 +76,7 @@ class LogsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${event.type} â€¢ ${event.createdAt.toLocal()}${event.details == null ? '' : ' â€¢ ${event.details}'}',
+                            '${event.type} • ${event.createdAt.toLocal()}${event.details == null ? '' : ' • ${event.details}'}',
                             style: const TextStyle(
                               color: ZentorColors.textSecondary,
                             ),

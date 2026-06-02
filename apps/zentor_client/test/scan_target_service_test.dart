@@ -39,10 +39,29 @@ void main() {
         'USERPROFILE': root.path,
         'APPDATA': appData.path,
       },
+      platform: ScanPlatform.windows,
     );
 
     expect(targets, contains(startup.path));
     expect(targets, isNot(contains(startMenu.path)));
+  });
+
+  test('quick scan planning can be tested for Linux persistence paths', () {
+    final root = Directory.systemTemp.createTempSync('zentor-linux-quick-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final autostart = Directory('${root.path}/.config/autostart')
+      ..createSync(recursive: true);
+    final localBin = Directory('${root.path}/.local/bin')
+      ..createSync(recursive: true);
+
+    final targets = const ScanTargetService().quickScanTargets(
+      environment: {'HOME': root.path},
+      platform: ScanPlatform.linux,
+    );
+
+    expect(targets, contains(autostart.path));
+    expect(targets, contains(localBin.path));
+    expect(targets, isNot(contains('${root.path}/.config')));
   });
 
   test('full scan roots include accessible home area', () {

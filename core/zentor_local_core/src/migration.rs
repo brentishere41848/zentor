@@ -76,10 +76,7 @@ pub fn legacy_data_dir() -> PathBuf {
 }
 
 pub fn migration_event_message() -> String {
-    format!(
-        "Migrated local data from {} to Avorax",
-        legacy_brand()
-    )
+    format!("Migrated local data from {} to Avorax", legacy_brand())
 }
 
 fn legacy_brand() -> String {
@@ -186,7 +183,10 @@ mod tests {
         assert!(PathBuf::from(report.marker_path).exists());
         assert_eq!(
             report.event_message,
-            format!("Migrated local data from {} to Avorax", ["Pa", "sus"].concat())
+            format!(
+                "Migrated local data from {} to Avorax",
+                ["Pa", "sus"].concat()
+            )
         );
     }
 
@@ -198,9 +198,11 @@ mod tests {
         fs::create_dir_all(source.join("logs")).unwrap();
         fs::write(source.join("logs").join("events.jsonl"), "old").unwrap();
 
-        assert!(migrate_from_dirs(source.clone(), destination.clone())
-            .unwrap()
-            .migrated);
+        assert!(
+            migrate_from_dirs(source.clone(), destination.clone())
+                .unwrap()
+                .migrated
+        );
         assert!(!migrate_from_dirs(source, destination).unwrap().migrated);
     }
 }

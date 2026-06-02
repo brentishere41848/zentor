@@ -97,7 +97,8 @@ class HomeScreen extends ConsumerWidget {
                       : state.updateStatus.label,
                   icon: Icons.system_update_alt_outlined,
                   secondary: true,
-                  onPressed: state.updateStatus == UpdateStatus.downloading ||
+                  onPressed:
+                      state.updateStatus == UpdateStatus.downloading ||
                           state.updateStatus == UpdateStatus.verifying ||
                           state.updateStatus == UpdateStatus.installing
                       ? null
@@ -309,45 +310,63 @@ class HomeScreen extends ConsumerWidget {
   }
 
   String _mainStatus(ZentorState state) {
-    if (state.scanStatus == ScanStatus.running) return 'Scan Running';
-    if ((state.lastScanReport?.threatsFound ?? 0) > 0) return 'Threats Found';
+    if (state.scanStatus == ScanStatus.running) return 'Scan running';
+    if ((state.lastScanReport?.threatsFound ?? 0) > 0) return 'Threats found';
+    if (state.updateStatus == UpdateStatus.updateAvailable) {
+      return 'Update required';
+    }
     if (state.protectionStatus == ProtectionStatus.protected ||
         state.protectionStatus == ProtectionStatus.localOnly) {
-      return 'Verified Protection Active';
+      return 'Protected';
+    }
+    if (state.protectionStatus == ProtectionStatus.idle) {
+      return 'Protection disabled';
     }
     if (state.protectionStatus == ProtectionStatus.error ||
         state.malwareEngineStatus == MalwareEngineStatus.unavailable) {
-      return 'Protection Disabled';
+      return 'Attention needed';
     }
-    return 'Action Required';
+    return 'Attention needed';
   }
 
   String _headline(ZentorState state) {
     final status = _mainStatus(state);
-    if (status == 'Verified Protection Active') return 'Verified protection active';
-    if (status == 'Scan Running') return 'Scan running';
-    if (status == 'Threats Found') return 'Review threats';
-    return 'Run a scan';
+    if (status == 'Protected') return 'Protected';
+    if (status == 'Scan running') return 'Scan running';
+    if (status == 'Threats found') return 'Review threats';
+    if (status == 'Update required') return 'Update required';
+    if (status == 'Protection disabled') return 'Protection disabled';
+    return 'Attention needed';
   }
 
   String _heroCopy(ZentorState state) {
-    if (state.scanStatus == ScanStatus.running) {
+    final status = _mainStatus(state);
+    if (status == 'Scan running') {
       return 'Avorax is scanning accessible files and will show real results when the scan completes.';
     }
-    if ((state.lastScanReport?.threatsFound ?? 0) > 0) {
+    if (status == 'Threats found') {
       return 'Review detected suspicious files before choosing quarantine, allowlist, restore, or delete actions.';
+    }
+    if (status == 'Update required') {
+      return 'A verified update is available. Install it to receive current app and protection improvements.';
+    }
+    if (status == 'Protection disabled') {
+      return 'Real-time protection is off. Run a scan or enable protection to improve this device status.';
     }
     if (state.protectionStatus == ProtectionStatus.localOnly) {
       return 'Local protection is active. Avorax Cloud is offline and does not block scanning or quarantine.';
+    }
+    if (status == 'Attention needed') {
+      return 'Avorax needs attention before it can report this device as protected. Check engine and protection status.';
     }
     return 'Anti-malware protection, quarantine, and local threat review, visible and under your control.';
   }
 
   Color _mainColor(ZentorState state) {
     final status = _mainStatus(state);
-    if (status == 'Verified Protection Active') return ZentorColors.success;
-    if (status == 'Threats Found') return ZentorColors.danger;
-    if (status == 'Scan Running') return ZentorColors.primaryAccent;
+    if (status == 'Protected') return ZentorColors.success;
+    if (status == 'Threats found') return ZentorColors.danger;
+    if (status == 'Scan running') return ZentorColors.primaryAccent;
     return ZentorColors.warning;
   }
 

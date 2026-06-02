@@ -4,6 +4,15 @@ Avorax is a privacy-first desktop anti-malware and security client. It is a real
 
 Avorax v1 runs Quick Scan, Full Scan, and Custom Scan flows fully offline. Scanning, quarantine, allowlist, logs, and scan results do not require Avorax Cloud, an account, an API, a login, or internet. Runtime data comes only from local state, local configuration, real API responses when optional cloud features are enabled, selected path hashing, local core results, and real errors.
 
+## Engineering docs
+
+- `ARCHITECTURE.md` explains the client/core/engine/service/update architecture and trust boundaries.
+- `SECURITY_MODEL.md` documents implemented protections, explicit non-goals, safe scan/quarantine/update rules, and known limitations.
+- `TESTING.md` lists the current Flutter, Rust, Dart, build, and release-gate commands.
+- `TODO.md` tracks the prioritized P0-P4 hardening backlog.
+- `RUN_LOG.md` records hardening-session assumptions, completed changes, verification, and blockers.
+- `CHANGELOG.md` records implemented product changes without unsupported security claims.
+
 ## Repository Layout
 
 ```text
@@ -225,20 +234,20 @@ For normal testing, installing the MSI or EXE is easier than running the app fro
 
 ```powershell
 cd C:\Users\Brent\CodexProjects\Avorax
-powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.9 -RequireLocalCore -AllowDevelopmentModel
+powershell -ExecutionPolicy Bypass -File installer\windows\build-msi.ps1 -Version 0.2.14 -RequireLocalCore -AllowDevelopmentModel
 ```
 
 The installers are written to:
 
 ```text
-dist\Avorax-AntiVirus-0.2.9-x64.msi
-dist\Avorax-AntiVirus-0.2.9-x64-setup.exe
+dist\Avorax-AntiVirus-0.2.14-x64.msi
+dist\Avorax-AntiVirus-0.2.14-x64-setup.exe
 ```
 
 Install either file:
 
-- `Avorax-AntiVirus-0.2.9-x64-setup.exe` is the easiest option for most users.
-- `Avorax-AntiVirus-0.2.9-x64.msi` is better for clean installer testing and enterprise-style deployment checks.
+- `Avorax-AntiVirus-0.2.14-x64-setup.exe` is the easiest option for most users.
+- `Avorax-AntiVirus-0.2.14-x64.msi` is better for clean installer testing and enterprise-style deployment checks.
 
 The MSI/EXE installs the app, Avorax Core Service, Avorax Guard Service, Avorax Native Engine assets under `C:\Program Files\Avorax\engine`, app assets, safe validation assets, release gates, driver tooling, safe simulator tools, threat-intel tools, docs, `install-manifest.json`, and ProgramData runtime folders. On Windows it registers `avorax_core_service` and `avorax_guard_service` as visible Windows services so local scanning and post-launch confirmed-threat monitoring can run without the UI. It does not replace the Windows driver-development VM workflow. True pre-execution blocking still requires WDK or EWDK, administrator rights, test-signing in a disposable VM, the minifilter/process-guard driver path, and the driver validation scripts.
 

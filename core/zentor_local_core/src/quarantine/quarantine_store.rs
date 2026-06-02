@@ -66,7 +66,10 @@ impl QuarantineStore {
             let entry = entry?;
             if entry.path().extension().and_then(|value| value.to_str()) == Some("json") {
                 let raw = fs::read_to_string(entry.path())?;
-                records.push(serde_json::from_str(&raw)?);
+                match serde_json::from_str(&raw) {
+                    Ok(record) => records.push(record),
+                    Err(_) => continue,
+                }
             }
         }
         Ok(records)
@@ -84,7 +87,15 @@ impl QuarantineStore {
         self.restore_requires_confirmation(id, confirmed)?;
         let mut record = self.find_record(id)?;
         let quarantine_path = PathBuf::from(&record.quarantine_path);
+        self.ensure_quarantine_payload_path(&quarantine_path)?;
         let original_path = PathBuf::from(&record.original_path);
+        if !original_path.is_absolute()
+            || original_path
+                .components()
+                .any(|component| matches!(component, std::path::Component::ParentDir))
+        {
+            return Err(anyhow!("unsafe original restore path"));
+        }
         if original_path.exists() {
             return Err(anyhow!("original path already exists"));
         }
@@ -103,6 +114,7 @@ impl QuarantineStore {
         }
         let mut record = self.find_record(id)?;
         let quarantine_path = PathBuf::from(&record.quarantine_path);
+        self.ensure_quarantine_payload_path(&quarantine_path)?;
         if quarantine_path.exists() {
             fs::remove_file(quarantine_path)?;
         }
@@ -116,6 +128,22 @@ impl QuarantineStore {
             .into_iter()
             .find(|record| record.quarantine_id == id)
             .ok_or_else(|| anyhow!("quarantine item not found"))
+    }
+
+    fn ensure_quarantine_payload_path(&self, path: &Path) -> Result<()> {
+        let canonical_base = self.base.canonicalize()?;
+        let canonical_payload = path.canonicalize()?;
+        if !canonical_payload.starts_with(canonical_base) {
+            return Err(anyhow!("quarantine payload path escapes quarantine store"));
+        }
+        if canonical_payload
+            .extension()
+            .and_then(|value| value.to_str())
+            != Some(QUARANTINE_EXTENSION)
+        {
+            return Err(anyhow!("quarantine payload has unsafe extension"));
+        }
+        Ok(())
     }
 
     fn write_record(&self, record: &QuarantineRecord) -> Result<()> {
@@ -134,7 +162,9 @@ fn quarantine_base() -> PathBuf {
     }
     if cfg!(windows) {
         if let Ok(program_data) = std::env::var("ProgramData") {
-            return PathBuf::from(program_data).join("Avorax").join("Quarantine");
+            return PathBuf::from(program_data)
+                .join("Avorax")
+                .join("Quarantine");
         }
     }
     if cfg!(target_os = "macos") {
@@ -196,6 +226,84 @@ mod tests {
         assert!(!file.exists());
         assert!(Path::new(&record.quarantine_path).exists());
         assert_eq!(store.list().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn restore_round_trip_requires_confirmation_and_avoids_overwrite() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("bad.exe");
+        fs::write(&file, b"bad").unwrap();
+        let store = QuarantineStore::with_base(dir.path().join("q"));
+        let result = fixture_scan_result(&file, ScanStatus::Infected);
+        let record = store.quarantine_file(&file, &result).unwrap();
+
+        fs::write(&file, b"replacement").unwrap();
+        assert!(store.restore(&record.quarantine_id, false).is_err());
+        assert!(store.restore(&record.quarantine_id, true).is_err());
+        fs::remove_file(&file).unwrap();
+
+        let restored = store.restore(&record.quarantine_id, true).unwrap();
+        assert_eq!(restored.status, QuarantineStatus::Restored);
+        assert!(file.exists());
+        assert_eq!(fs::read(&file).unwrap(), b"bad");
+    }
+
+    #[test]
+    fn delete_requires_confirmation_and_removes_payload_only_inside_store() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("bad.exe");
+        fs::write(&file, b"bad").unwrap();
+        let store = QuarantineStore::with_base(dir.path().join("q"));
+        let result = fixture_scan_result(&file, ScanStatus::Infected);
+        let record = store.quarantine_file(&file, &result).unwrap();
+        let payload = PathBuf::from(&record.quarantine_path);
+
+        assert!(store.delete(&record.quarantine_id, false).is_err());
+        assert!(payload.exists());
+
+        let deleted = store.delete(&record.quarantine_id, true).unwrap();
+        assert_eq!(deleted.status, QuarantineStatus::Deleted);
+        assert!(!payload.exists());
+    }
+
+    #[test]
+    fn corrupt_metadata_is_skipped_without_hiding_valid_records() {
+        let dir = tempdir().unwrap();
+        let base = dir.path().join("q");
+        fs::create_dir_all(&base).unwrap();
+        fs::write(base.join("corrupt.json"), b"{not-json").unwrap();
+        let payload = base.join("valid.avoraxq");
+        fs::write(&payload, b"quarantined").unwrap();
+        let record = fixture_record("valid", dir.path().join("restore.exe"), payload);
+        fs::write(
+            base.join("valid.json"),
+            serde_json::to_string_pretty(&record).unwrap(),
+        )
+        .unwrap();
+
+        let store = QuarantineStore::with_base(base);
+        let records = store.list().unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].quarantine_id, "valid");
+    }
+
+    #[test]
+    fn quarantine_record_cannot_delete_payload_outside_store() {
+        let dir = tempdir().unwrap();
+        let base = dir.path().join("q");
+        fs::create_dir_all(&base).unwrap();
+        let outside = dir.path().join("outside.avoraxq");
+        fs::write(&outside, b"do not delete").unwrap();
+        let record = fixture_record("escape", dir.path().join("restore.exe"), outside.clone());
+        fs::write(
+            base.join("escape.json"),
+            serde_json::to_string_pretty(&record).unwrap(),
+        )
+        .unwrap();
+
+        let store = QuarantineStore::with_base(base);
+        assert!(store.delete("escape", true).is_err());
+        assert!(outside.exists());
     }
 
     #[test]
@@ -287,18 +395,46 @@ mod tests {
         let dir = tempdir().unwrap();
         let file = dir.path().join("clean.exe");
         fs::write(&file, b"clean").unwrap();
-        let result = ScanResult {
-            status: ScanStatus::Clean,
-            scanned_path: file.display().to_string(),
-            sha256: "sha256:clean".to_string(),
+        let result = fixture_scan_result(&file, ScanStatus::Clean);
+        assert_eq!(result.status, ScanStatus::Clean);
+        assert!(file.exists());
+    }
+
+    fn fixture_scan_result(path: &Path, status: ScanStatus) -> ScanResult {
+        ScanResult {
+            status,
+            scanned_path: path.display().to_string(),
+            sha256: "sha256:fixture".to_string(),
             engine: "fixture-provider".to_string(),
-            signature_name: None,
-            threat_name: None,
+            signature_name: Some("Fixture".to_string()),
+            threat_name: Some("Fixture".to_string()),
             scanned_at: Utc::now(),
             duration_ms: 1,
             raw_engine_summary: None,
-        };
-        assert_eq!(result.status, ScanStatus::Clean);
-        assert!(file.exists());
+        }
+    }
+
+    fn fixture_record(
+        id: &str,
+        original_path: PathBuf,
+        quarantine_path: PathBuf,
+    ) -> QuarantineRecord {
+        QuarantineRecord {
+            quarantine_id: id.to_string(),
+            original_path: original_path.display().to_string(),
+            quarantine_path: quarantine_path.display().to_string(),
+            sha256: "sha256:fixture".to_string(),
+            file_size: 11,
+            detection_name: "Fixture detection".to_string(),
+            engine: "Avorax Native Engine".to_string(),
+            quarantined_at: Utc::now(),
+            status: QuarantineStatus::Quarantined,
+            user_note: None,
+            source: "scanner".to_string(),
+            blocked_before_execution: false,
+            process_started: false,
+            action_taken: "quarantined".to_string(),
+            process_id: None,
+        }
     }
 }

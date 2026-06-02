@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-In-app signed updater implementation for Avorax. MSI/EXE installers remain first-install, repair, recovery, offline, and manual-install paths only. Normal app updates now target signed `.aup` packages applied by Avorax Update Service.
+Product-hardening sprint for Avorax Anti-Virus. MSI/EXE installers remain first-install, repair, recovery, offline, and manual-install paths only. Normal app updates target signed `.aup` packages applied by Avorax Update Service.
 
 ## Current Commit
 
@@ -26,11 +26,25 @@ In-app signed updater implementation for Avorax. MSI/EXE installers remain first
 - Wired the Scan page engine-unavailable recovery actions to real local operations: elevated Avorax Core Service start, explicit service registration/start repair, and install-report opening.
 - Added audit logging for install-report open and installation-repair requests, and made scan errors distinguish stopped or missing Core Service states from generic native-engine unavailability.
 - Generated `dist\Avorax-AntiVirus-0.2.14-x64.msi` and `dist\Avorax-AntiVirus-0.2.14-x64-setup.exe` from a local Windows toolchain provisioned with Flutter 3.44.0, Rust 1.96.0, .NET SDK 8.0.421, and WiX 6.0.2.
+- Generated release installer artifacts for this checkpoint: `dist\Avorax-AntiVirus-0.2.15-x64.msi` and `dist\Avorax-AntiVirus-0.2.15-x64-setup.exe`.
 - Patched Windows MSI/EXE packaging so the Avorax Native Engine installed layout (`engine\config`, `engine\signatures`, `engine\rules`, `engine\ml`, and `engine\trust`) is staged into the installer automatically for both direct MSI installs and the EXE bootstrapper.
 - Added visible installer proof UI: the MSI uses `WixUI_Minimal` with a license/proof page, and the EXE bootstrapper uses WiX Standard BA visible UI/progress while embedding the MSI.
 - Verified the staged Avorax Core Service can load the packaged installed engine layout from `dist\windows-msi\stage\engine`, with native engine status `ready`, 17 native signatures, 11 native rules, development ML loaded, and native self-test passing.
 - Preserved native signature category evidence in the risk-fusion path so confirmed hash signatures retain their declared threat category in final verdicts.
 - Tightened the installer stage gate so generated WiX validation checks visible product-facing copy, visible installer UI/progress, and native-engine assets without failing on non-visible WiX IDs or technical compatibility paths.
+- Created `ARCHITECTURE.md`, `SECURITY_MODEL.md`, `TESTING.md`, `CHANGELOG.md`, `TODO.md`, and `RUN_LOG.md` for the hardening sprint.
+- Hardened Flutter scan orchestration so successful scans clear stale engine errors and cancelled scan progress cannot overwrite cancelled state.
+- Reworked Quick Scan target planning into testable platform-specific scopes for Windows/macOS/Linux high-risk locations.
+- Hardened local event history loading so corrupt JSON or invalid records cannot crash startup or logs.
+- Hardened quarantine restore/delete safety with explicit payload-path validation, corrupt metadata recovery, restore/delete confirmation tests, and duplicate restore-name handling.
+- Added UI confirmation dialogs for quarantine restore and permanent delete actions.
+- Improved Settings safety with reset confirmation, log-export feedback, and clean developer override disable behavior.
+- Polished dashboard/protection/scan states to avoid unsupported claims, remove dead Pause/Keep controls, and show real Core Service status instead of hard-coded running text.
+- Added visual policy tests for destructive quarantine confirmation and protection service-state honesty.
+- Added best-effort user-mode watcher planning and file-event evaluation in `core/zentor_local_core/src/watcher/mod.rs`, including accessible-path filtering, debounce waiting, stable-file retry, unchanged-file cache suppression, and monitor-only review observations that do not label or block malware.
+- Wired `start_watch` to return an honest `userModeBestEffort` watcher state for existing requested paths instead of always returning stopped.
+- Improved Flutter `LocalCoreClient` IPC diagnostics for executable-missing, stderr/non-zero exit, malformed JSON, and timeout cases; health summary now exposes IPC failures through `lastError` for recovery UI messaging.
+- Wired Flutter protection startup/shutdown to `start_watch` / `stop_watch` for selected existing protected folders, keeps selected app paths in scan/watch paths, and displays `userModeBestEffort` honestly as best-effort user-mode monitoring without claiming kernel pre-execution blocking.
 
 ## Blockers
 
@@ -39,6 +53,7 @@ In-app signed updater implementation for Avorax. MSI/EXE installers remain first
 - `packages/avorax_protocol` does not declare `package:test` as a dev dependency, so `dart test` cannot run for that package without a package metadata change.
 - No production update signing key is configured here. The package builder intentionally refuses unsigned `.aup` output.
 - No signed Windows driver has been built, installed, run, or self-tested in this environment.
+- Current `cargo test --manifest-path core/zentor_native_engine/Cargo.toml` is blocked by Microsoft Defender with Windows error 225 because the generated test executable contains antivirus-style synthetic fixtures/signatures.
 
 ## Tests Passed Locally
 
@@ -58,6 +73,14 @@ In-app signed updater implementation for Avorax. MSI/EXE installers remain first
 - `cd apps/zentor_client && flutter test`
 - `cd packages/zentor_protocol && dart pub get && dart test` using the Dart SDK bundled with Flutter.
 - `powershell -ExecutionPolicy Bypass -File tools/security/zentor-false-positive-gate.ps1`
+- Current hardening pass: `cd apps/zentor_client && flutter analyze` using `C:\Users\Brent\develop\flutter\bin\flutter.bat`.
+- Current hardening pass: `cd apps/zentor_client && flutter test` passed 34 tests after IPC diagnostics and protection watcher UI wiring.
+- Current hardening pass: `cd apps/zentor_client && flutter build windows --debug` produced `build\windows\x64\runner\Debug\Avorax.exe`.
+- Release installer build: `powershell -ExecutionPolicy Bypass -File installer/windows/build-msi.ps1 -Version 0.2.15 -RequireLocalCore -AllowDevelopmentModel` produced `dist\Avorax-AntiVirus-0.2.15-x64.msi` and `dist\Avorax-AntiVirus-0.2.15-x64-setup.exe`.
+- Installer stage verification: `powershell -ExecutionPolicy Bypass -File tools/windows/avorax-installer-stage-test.ps1 -StagePath dist/windows-msi/stage` passed, and staged core health reported native engine `ready`, 17 signatures, 11 rules, development ML loaded, and native self-test true.
+- Current hardening pass: `cargo test --manifest-path core/zentor_local_core/Cargo.toml` passed 64 tests after adding best-effort user-mode watch planning/debounce/cache tests.
+- Current hardening pass: `cargo test --manifest-path core/zentor_guard_service/Cargo.toml` passed 19 tests.
+- Current hardening pass: `cd packages/zentor_protocol && dart test` passed 4 tests.
 
 ## Tests Blocked Locally
 
@@ -65,9 +88,11 @@ In-app signed updater implementation for Avorax. MSI/EXE installers remain first
 - `cd packages/avorax_protocol && dart pub get && dart test` is blocked because `package:test` is not declared.
 - `powershell -ExecutionPolicy Bypass -File tools/windows/zentor-release-gate.ps1` is blocked by the missing driver self-test report.
 
+- Current hardening pass: `cargo test --manifest-path core/zentor_native_engine/Cargo.toml` is blocked by Microsoft Defender error 225 on the generated test executable.
+
 ## Exact Next Task
 
-Run CI or a provisioned Windows build host with Cargo, Flutter, Dart, WiX, signing configuration, and installer tooling; then fix any compile/test failures before creating a release tag.
+Harden guard-service IPC trust boundary so caller-provided publisher/signature fields cannot bypass policy unless verified by a trusted driver/service path.
 
 ## Final Limitations
 

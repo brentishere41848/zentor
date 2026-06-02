@@ -65,6 +65,133 @@ void main() {
     );
     expect(localCore.lastKind, ScanKind.full);
   });
+
+  test(
+    'start protection starts best-effort watcher for protected folders',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final target = Directory.systemTemp.createTempSync(
+        'avorax-watch-folder-',
+      );
+      addTearDown(() => target.deleteSync(recursive: true));
+      final localCore = _FakeLocalCoreClient(
+        watcherState: RealtimeWatcherState(
+          active: true,
+          mode: 'userModeBestEffort',
+          watchedPaths: [target.path],
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          localCoreClientProvider.overrideWithValue(localCore),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final controller = container.read(zentorControllerProvider.notifier);
+      await Future<void>.delayed(Duration.zero);
+      await controller.selectDetectedApp(
+        DetectedApp(
+          appId: 'folder',
+          displayName: 'Protected folder',
+          path: target.path,
+          source: 'test',
+        ),
+      );
+      await controller.startProtection();
+
+      final state = container.read(zentorControllerProvider);
+      expect(localCore.watchCalls, 1);
+      expect(localCore.lastWatchPaths, [target.path]);
+      expect(state.realtimeWatcherMode, 'userModeBestEffort');
+      expect(state.realtimeWatchedPaths, [target.path]);
+      expect(state.protectionStatus, ProtectionStatus.partiallyProtected);
+      expect(state.errorMessage, isNull);
+    },
+  );
+
+  test('stop protection stops watcher and clears watcher state', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final target = Directory.systemTemp.createTempSync('avorax-stop-watch-');
+    addTearDown(() => target.deleteSync(recursive: true));
+    final localCore = _FakeLocalCoreClient(
+      watcherState: RealtimeWatcherState(
+        active: true,
+        mode: 'userModeBestEffort',
+        watchedPaths: [target.path],
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        localCoreClientProvider.overrideWithValue(localCore),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(zentorControllerProvider.notifier);
+    await Future<void>.delayed(Duration.zero);
+    await controller.selectDetectedApp(
+      DetectedApp(
+        appId: 'folder',
+        displayName: 'Protected folder',
+        path: target.path,
+        source: 'test',
+      ),
+    );
+    await controller.startProtection();
+    await controller.stopProtection();
+
+    final state = container.read(zentorControllerProvider);
+    expect(localCore.stopWatchCalls, 1);
+    expect(state.realtimeWatcherMode, 'off');
+    expect(state.realtimeWatchedPaths, isEmpty);
+    expect(state.protectionStatus, ProtectionStatus.idle);
+  });
+
+  test('successful scan clears a stale engine error message', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final target = Directory.systemTemp.createTempSync('zentor-error-clear-');
+    addTearDown(() => target.deleteSync(recursive: true));
+    final localCore = _FakeLocalCoreClient(
+      reports: [
+        _scanReport(ScanStatus.engineUnavailable, ScanKind.quick),
+        _scanReport(ScanStatus.clean, ScanKind.quick),
+      ],
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        localCoreClientProvider.overrideWithValue(localCore),
+        scanTargetServiceProvider.overrideWithValue(
+          _FakeScanTargetService([target.path]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(zentorControllerProvider.notifier);
+    await Future<void>.delayed(Duration.zero);
+
+    await controller.runQuickScan();
+    expect(
+      container.read(zentorControllerProvider).scanStatus,
+      ScanStatus.engineUnavailable,
+    );
+    expect(container.read(zentorControllerProvider).errorMessage, isNotNull);
+
+    await controller.runQuickScan();
+    final state = container.read(zentorControllerProvider);
+    expect(state.scanStatus, ScanStatus.clean);
+    expect(state.errorMessage, isNull);
+  });
 }
 
 class _FakeScanTargetService extends ScanTargetService {
@@ -73,14 +200,30 @@ class _FakeScanTargetService extends ScanTargetService {
   final List<String> paths;
 
   @override
-  List<String> quickScanTargets({Map<String, String>? environment}) => paths;
+  List<String> quickScanTargets({
+    Map<String, String>? environment,
+    ScanPlatform? platform,
+  }) => paths;
 
   @override
-  List<String> fullScanRoots({Map<String, String>? environment}) => paths;
+  List<String> fullScanRoots({
+    Map<String, String>? environment,
+    ScanPlatform? platform,
+  }) => paths;
 }
 
 class _FakeLocalCoreClient extends LocalCoreClient {
+  _FakeLocalCoreClient({
+    List<ScanReport>? reports,
+    this._watcherState = const RealtimeWatcherState(active: false, mode: 'off'),
+  }) : _reports = List<ScanReport>.of(reports ?? const []);
+
+  final List<ScanReport> _reports;
+  final RealtimeWatcherState _watcherState;
   int scanCalls = 0;
+  int watchCalls = 0;
+  int stopWatchCalls = 0;
+  List<String> lastWatchPaths = const [];
   ScanKind? lastKind;
 
   @override
@@ -88,6 +231,29 @@ class _FakeLocalCoreClient extends LocalCoreClient {
 
   @override
   Future<MalwareEngineStatus> health() async => MalwareEngineStatus.available;
+
+  @override
+  Future<LocalCoreHealth> healthSummary() async => const LocalCoreHealth(
+    malwareEngineStatus: MalwareEngineStatus.available,
+    nativeEngineStatus: 'ready',
+    coreServiceStatus: 'running',
+  );
+
+  @override
+  Future<bool> configureGuardMode(ProtectionMode mode) async => true;
+
+  @override
+  Future<RealtimeWatcherState> startWatch(List<String> paths) async {
+    watchCalls += 1;
+    lastWatchPaths = List<String>.of(paths);
+    return _watcherState;
+  }
+
+  @override
+  Future<RealtimeWatcherState> stopWatch() async {
+    stopWatchCalls += 1;
+    return const RealtimeWatcherState(active: false, mode: 'off');
+  }
 
   @override
   Future<ScanReport> scanPaths(
@@ -115,18 +281,28 @@ class _FakeLocalCoreClient extends LocalCoreClient {
         elapsedSeconds: 0,
       ),
     );
-    return ScanReport(
-      status: ScanStatus.clean,
-      kind: kind,
-      actionMode: actionMode,
-      filesScanned: 0,
-      foldersScanned: 1,
-      bytesScanned: 0,
-      threatsFound: 0,
-      suspiciousFound: 0,
-      skippedFiles: 0,
-      elapsedMs: 1,
-      threats: const [],
-    );
+    return _reports.isNotEmpty
+        ? _reports.removeAt(0)
+        : _scanReport(ScanStatus.clean, kind, actionMode: actionMode);
   }
+}
+
+ScanReport _scanReport(
+  ScanStatus status,
+  ScanKind kind, {
+  ScanActionMode actionMode = ScanActionMode.autoQuarantineConfirmedOnly,
+}) {
+  return ScanReport(
+    status: status,
+    kind: kind,
+    actionMode: actionMode,
+    filesScanned: 0,
+    foldersScanned: 1,
+    bytesScanned: 0,
+    threatsFound: 0,
+    suspiciousFound: 0,
+    skippedFiles: 0,
+    elapsedMs: 1,
+    threats: const [],
+  );
 }

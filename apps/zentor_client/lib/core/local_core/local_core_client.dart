@@ -1,10 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:zentor_protocol/zentor_protocol.dart';
 
 class LocalCoreClient {
-  const LocalCoreClient();
+  const LocalCoreClient({
+    this.executableOverride,
+    this.executableArguments = const [],
+    this.ipcTimeout = const Duration(minutes: 30),
+  });
+
+  final String? executableOverride;
+  final List<String> executableArguments;
+  final Duration ipcTimeout;
 
   static Process? _activeScanProcess;
 
@@ -19,6 +28,12 @@ class LocalCoreClient {
     if (!isDesktop) return const LocalCoreHealth();
     final response = await _call({'command': 'health'});
     if (response == null) return const LocalCoreHealth();
+    if (response['ok'] == false) {
+      return LocalCoreHealth(
+        coreServiceStatus: 'error',
+        lastError: response['error']?.toString(),
+      );
+    }
     final engine = response['engine_status'];
     final aiModelRaw = response['ai_model'];
     return LocalCoreHealth(
@@ -47,7 +62,8 @@ class LocalCoreClient {
       driverStatus: response['driver_status'] as String? ?? 'missing',
       installPath: response['install_path']?.toString(),
       engineDirectory: response['engine_directory']?.toString(),
-      enginePathsChecked: (response['engine_paths_checked'] as List?)
+      enginePathsChecked:
+          (response['engine_paths_checked'] as List?)
               ?.map((item) => item.toString())
               .toList() ??
           const [],
@@ -232,6 +248,32 @@ class LocalCoreClient {
     return response?['ok'] == true;
   }
 
+  Future<RealtimeWatcherState> startWatch(List<String> paths) async {
+    final response = await _call({'command': 'start_watch', 'paths': paths});
+    if (response == null || response['ok'] == false) {
+      return RealtimeWatcherState(
+        active: false,
+        mode: 'off',
+        watchedPaths: const [],
+        error: response?['error']?.toString(),
+      );
+    }
+    final watcher = response['watcher'];
+    if (watcher is Map) {
+      return RealtimeWatcherState.fromJson(Map<String, Object?>.from(watcher));
+    }
+    return const RealtimeWatcherState(active: false, mode: 'off');
+  }
+
+  Future<RealtimeWatcherState> stopWatch() async {
+    final response = await _call({'command': 'stop_watch'});
+    final watcher = response?['watcher'];
+    if (watcher is Map) {
+      return RealtimeWatcherState.fromJson(Map<String, Object?>.from(watcher));
+    }
+    return const RealtimeWatcherState(active: false, mode: 'off');
+  }
+
   Future<String> startCoreService() async {
     if (!Platform.isWindows) {
       return 'Starting the Avorax Core Service is only supported on Windows.';
@@ -333,47 +375,96 @@ Start-Service -Name 'avorax_core_service' -ErrorAction Stop
   }) async {
     if (!isDesktop) return null;
     final executable = _localCoreExecutable();
-    if (executable == null || !File(executable).existsSync()) return null;
+    if (executable == null || !File(executable).existsSync()) {
+      return {
+        'ok': false,
+        'error': 'Avorax Core Service executable was not found at $executable.',
+      };
+    }
     try {
-      final process = await Process.start(executable, []);
+      final process = await Process.start(executable, executableArguments);
       if (command['command'] == 'scan_file' ||
           command['command'] == 'scan_folder' ||
           command['command'] == 'quick_scan_selected_paths' ||
           command['command'] == 'full_scan') {
         _activeScanProcess = process;
       }
-      process.stdin.writeln(jsonEncode(command));
-      await process.stdin.close();
-      Map<String, Object?>? last;
-      await for (final line
-          in process.stdout
-              .transform(utf8.decoder)
-              .transform(const LineSplitter())) {
-        final trimmed = line.trim();
-        if (trimmed.isEmpty) continue;
-        final decoded = jsonDecode(trimmed);
-        if (decoded is! Map) continue;
-        final map = Map<String, Object?>.from(decoded);
-        if (map['type'] == 'progress' && onProgress != null) {
-          final raw = map['progress'];
-          if (raw is Map) {
-            onProgress(_scanProgressFromJson(Map<String, Object?>.from(raw)));
+      return await (() async {
+        process.stdin.writeln(jsonEncode(command));
+        await process.stdin.close();
+        final stderrFuture = process.stderr.transform(utf8.decoder).join();
+        Map<String, Object?>? last;
+        String? malformedLine;
+        await for (final line
+            in process.stdout
+                .transform(utf8.decoder)
+                .transform(const LineSplitter())) {
+          final trimmed = line.trim();
+          if (trimmed.isEmpty) continue;
+          Object? decoded;
+          try {
+            decoded = jsonDecode(trimmed);
+          } on Object {
+            malformedLine ??= trimmed;
+            continue;
           }
-        } else {
-          last = map;
+          if (decoded is! Map) continue;
+          final map = Map<String, Object?>.from(decoded);
+          if (map['type'] == 'progress' && onProgress != null) {
+            final raw = map['progress'];
+            if (raw is Map) {
+              onProgress(_scanProgressFromJson(Map<String, Object?>.from(raw)));
+            }
+          } else {
+            last = map;
+          }
         }
-      }
-      await process.stderr.drain<void>();
-      await process.exitCode.timeout(const Duration(minutes: 30));
-      return last;
-    } on Object {
-      return null;
+        final stderr = (await stderrFuture).trim();
+        final exitCode = await process.exitCode;
+        if (exitCode != 0) {
+          final detail = stderr.isEmpty ? 'no stderr output' : stderr;
+          return {
+            'ok': false,
+            'error':
+                'Avorax local core exited with exit code $exitCode: $detail',
+          };
+        }
+        if (last == null && malformedLine != null) {
+          return {
+            'ok': false,
+            'error':
+                'Avorax local core returned malformed JSON: $malformedLine',
+          };
+        }
+        return last;
+      })().timeout(
+        ipcTimeout,
+        onTimeout: () {
+          process.kill();
+          return {
+            'ok': false,
+            'error':
+                'Avorax local core IPC timed out after ${_formatDuration(ipcTimeout)}.',
+          };
+        },
+      );
+    } on Object catch (error) {
+      return {'ok': false, 'error': 'Avorax local core IPC failed: $error'};
     } finally {
       _activeScanProcess = null;
     }
   }
 
+  String _formatDuration(Duration duration) {
+    if (duration.inMilliseconds < 1000) {
+      return '${duration.inMilliseconds}ms';
+    }
+    if (duration.inSeconds < 60) return '${duration.inSeconds}s';
+    return '${duration.inMinutes}m';
+  }
+
   String? _localCoreExecutable() {
+    if (executableOverride != null) return executableOverride;
     final override =
         Platform.environment['AVORAX_CORE_SERVICE'] ??
         Platform.environment['ZENTOR_LOCAL_CORE'];
@@ -680,6 +771,32 @@ Start-Service -Name 'avorax_core_service' -ErrorAction Stop
     }
     return null;
   }
+}
+
+class RealtimeWatcherState {
+  const RealtimeWatcherState({
+    required this.active,
+    required this.mode,
+    this.watchedPaths = const [],
+    this.error,
+  });
+
+  factory RealtimeWatcherState.fromJson(Map<String, Object?> json) {
+    final rawPaths = json['watched_paths'] ?? json['watchedPaths'];
+    return RealtimeWatcherState(
+      active: json['active'] as bool? ?? false,
+      mode: json['mode']?.toString() ?? 'off',
+      watchedPaths: rawPaths is List
+          ? rawPaths.map((item) => item.toString()).toList()
+          : const [],
+      error: json['error']?.toString(),
+    );
+  }
+
+  final bool active;
+  final String mode;
+  final List<String> watchedPaths;
+  final String? error;
 }
 
 class LocalCoreHealth {

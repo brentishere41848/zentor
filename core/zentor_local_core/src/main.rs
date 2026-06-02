@@ -7,13 +7,12 @@ use std::time::Instant;
 
 use anyhow::Result;
 use chrono::Utc;
-use zentor_native_engine::{
-    Confidence as AneConfidence, EngineConfig, ZentorNativeEngine,
-    ScanActionMode as AneScanActionMode, ThreatCategory as AneThreatCategory,
-    Verdict as AneVerdict,
-};
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use zentor_native_engine::{
+    Confidence as AneConfidence, EngineConfig, ScanActionMode as AneScanActionMode,
+    ThreatCategory as AneThreatCategory, Verdict as AneVerdict, ZentorNativeEngine,
+};
 
 mod ai;
 mod allowlist;
@@ -88,7 +87,9 @@ fn windows_service_main(_arguments: Vec<OsString>) {
     if let Err(error) = run_windows_service_loop() {
         let _ = std::fs::create_dir_all(avorax_program_data_dir().join("logs"));
         let _ = std::fs::write(
-            avorax_program_data_dir().join("logs").join("core_service_error.log"),
+            avorax_program_data_dir()
+                .join("logs")
+                .join("core_service_error.log"),
             format!("{error:#}"),
         );
     }
@@ -100,21 +101,21 @@ fn run_windows_service_loop() -> Result<()> {
         ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
         ServiceType,
     };
-    use windows_service::service_control_handler::{
-        self, ServiceControlHandlerResult,
-    };
+    use windows_service::service_control_handler::{self, ServiceControlHandlerResult};
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel();
-    let status_handle = service_control_handler::register(SERVICE_NAME, move |control_event| {
-        match control_event {
-            ServiceControl::Stop | ServiceControl::Shutdown => {
-                let _ = shutdown_tx.send(());
-                ServiceControlHandlerResult::NoError
-            }
-            ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
-            _ => ServiceControlHandlerResult::NotImplemented,
-        }
-    })?;
+    let status_handle =
+        service_control_handler::register(
+            SERVICE_NAME,
+            move |control_event| match control_event {
+                ServiceControl::Stop | ServiceControl::Shutdown => {
+                    let _ = shutdown_tx.send(());
+                    ServiceControlHandlerResult::NoError
+                }
+                ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
+                _ => ServiceControlHandlerResult::NotImplemented,
+            },
+        )?;
 
     status_handle.set_service_status(ServiceStatus {
         service_type: ServiceType::OWN_PROCESS,
@@ -209,7 +210,15 @@ fn handle(command: CoreCommand) -> serde_json::Value {
             let store = AllowlistStore::new();
             json!({"ok": true, "entries": store.list()})
         }
-        "start_watch" => json!({"ok": true, "watcher": WatcherState::stopped()}),
+        "start_watch" => {
+            let requested_paths: Vec<PathBuf> = command
+                .paths
+                .unwrap_or_default()
+                .into_iter()
+                .map(PathBuf::from)
+                .collect();
+            json!({"ok": true, "watcher": WatcherState::from_requested_paths(requested_paths)})
+        }
         "stop_watch" => json!({"ok": true, "watcher": WatcherState::stopped()}),
         "quarantine_file" => {
             let Some(path) = command.path else {
@@ -584,10 +593,7 @@ fn scan_paths(
         elapsed_ms: started.elapsed().as_millis(),
         current_path: last_path,
         message: if engine_unavailable {
-            Some(
-                "Avorax Native Engine is unavailable; files were not reported clean."
-                    .to_string(),
-            )
+            Some("Avorax Native Engine is unavailable; files were not reported clean.".to_string())
         } else if kind == ScanKind::Full {
             Some("Full Scan is optimized to finish within the scan budget by prioritizing risky files and skipping known cache/build folders.".to_string())
         } else if kind == ScanKind::Quick {
@@ -718,12 +724,7 @@ impl EngineAssetLocator {
                 .file_name()
                 .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("engine"))
             {
-                candidates.push(
-                    engine
-                        .parent()
-                        .unwrap_or(engine.as_path())
-                        .to_path_buf(),
-                );
+                candidates.push(engine.parent().unwrap_or(engine.as_path()).to_path_buf());
             } else {
                 candidates.push(engine);
             }
@@ -987,7 +988,9 @@ fn native_threat_name(value: AneVerdict) -> String {
     }
 }
 
-fn native_engine_source(source: &zentor_native_engine::verdict::risk_fusion::EvidenceSource) -> RiskEngine {
+fn native_engine_source(
+    source: &zentor_native_engine::verdict::risk_fusion::EvidenceSource,
+) -> RiskEngine {
     match source {
         zentor_native_engine::verdict::risk_fusion::EvidenceSource::NativeSignature => {
             RiskEngine::Signature
@@ -1220,10 +1223,7 @@ fn write_guard_mode_config(raw_mode: &str) -> anyhow::Result<String> {
 }
 
 fn normalize_guard_mode(raw: &str) -> Option<&'static str> {
-    let normalized = raw
-        .trim()
-        .replace(['-', '_', ' '], "")
-        .to_ascii_lowercase();
+    let normalized = raw.trim().replace(['-', '_', ' '], "").to_ascii_lowercase();
     match normalized.as_str() {
         "off" | "disabled" => Some("disabled"),
         "monitoronly" | "observeonly" => Some("monitorOnly"),
@@ -1336,6 +1336,43 @@ mod tests {
             .paths_checked
             .iter()
             .any(|path| path == &locator.asset_root));
+    }
+
+    #[test]
+    fn start_watch_command_returns_best_effort_watcher_for_existing_paths() {
+        let dir = tempdir().unwrap();
+        let command = CoreCommand {
+            command: "start_watch".to_string(),
+            path: None,
+            paths: Some(vec![
+                dir.path().display().to_string(),
+                dir.path().join("missing").display().to_string(),
+            ]),
+            action_mode: None,
+            scan_kind: None,
+            threat_name: None,
+            engine: None,
+            quarantine_id: None,
+            confirmed: None,
+            sha256: None,
+            user_label: None,
+            user_note: None,
+            previous_verdict: None,
+            protection_mode: None,
+        };
+
+        let response = handle(command);
+
+        assert_eq!(response["ok"], true);
+        assert_eq!(response["watcher"]["active"], true);
+        assert_eq!(response["watcher"]["mode"], "userModeBestEffort");
+        assert_eq!(
+            response["watcher"]["watched_paths"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -1564,7 +1601,8 @@ mod tests {
 
     #[test]
     fn block_confirmed_mode_does_not_quarantine_probable_review_item() {
-        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        let mut input =
+            ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
         input.probable_malware = true;
         input.strong_risk_signal = true;
         let policy = ApplicationControlPolicy::new(ProtectionMode::BlockConfirmedThreats);
@@ -1580,7 +1618,8 @@ mod tests {
 
     #[test]
     fn lockdown_blocks_probable_review_item_without_quarantine_or_malware_label() {
-        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        let mut input =
+            ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
         input.probable_malware = true;
         input.strong_risk_signal = true;
         let policy = ApplicationControlPolicy::new(ProtectionMode::Lockdown);
@@ -1596,7 +1635,8 @@ mod tests {
 
     #[test]
     fn monitor_only_does_not_quarantine_probable_review_item() {
-        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
+        let mut input =
+            ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\review.exe");
         input.probable_malware = true;
         input.strong_risk_signal = true;
         let policy = ApplicationControlPolicy::new(ProtectionMode::MonitorOnly);

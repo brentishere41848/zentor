@@ -14,19 +14,78 @@ void main() {
   });
 
   test('device tab does not expose implementation wording', () {
-    final deviceScreen = File('lib/features/device/device_screen.dart').readAsStringSync();
-    final platformInfo = File('lib/core/platform/platform_info_service.dart').readAsStringSync();
+    final deviceScreen = File(
+      'lib/features/device/device_screen.dart',
+    ).readAsStringSync();
+    final platformInfo = File(
+      'lib/core/platform/platform_info_service.dart',
+    ).readAsStringSync();
 
     expect(deviceScreen, contains('Device & Protection Health'));
     expect(deviceScreen, isNot(contains('Flutter local core active')));
     expect(platformInfo, isNot(contains('Flutter local core active')));
   });
 
-  test('weak scan results do not show default quarantine or detected badge', () {
-    final scanScreen = File('lib/features/scan/scan_screen.dart').readAsStringSync();
+  test('protection UI labels best-effort watcher honestly', () {
+    final protectionScreen = File(
+      'lib/features/protection/protection_screen.dart',
+    ).readAsStringSync();
 
-    expect(scanScreen, contains('Review suggested'));
-    expect(scanScreen, contains('_canQuarantineByDefault'));
-    expect(scanScreen, contains('_badgeLabel'));
+    expect(protectionScreen, contains('User-mode monitor'));
+    expect(protectionScreen, contains('best-effort folder monitoring'));
+    expect(
+      protectionScreen,
+      contains('No kernel pre-execution blocking is claimed'),
+    );
+  });
+
+  test(
+    'weak scan results do not show default quarantine or detected badge',
+    () {
+      final scanScreen = File(
+        'lib/features/scan/scan_screen.dart',
+      ).readAsStringSync();
+
+      expect(scanScreen, contains('Review suggested'));
+      expect(scanScreen, contains('_canQuarantineByDefault'));
+      expect(scanScreen, contains('_badgeLabel'));
+    },
+  );
+
+  test(
+    'quarantine destructive actions require confirmation and no dead keep button',
+    () {
+      final quarantineScreen = File(
+        'lib/features/quarantine/quarantine_screen.dart',
+      ).readAsStringSync();
+
+      expect(quarantineScreen, contains('Restore quarantined file?'));
+      expect(
+        quarantineScreen,
+        contains('Delete quarantined file permanently?'),
+      );
+      expect(quarantineScreen, contains('This cannot be undone by Avorax.'));
+      expect(quarantineScreen, isNot(contains("label: 'Keep quarantined'")));
+      expect(
+        quarantineScreen,
+        contains("const _MetaChip('Default', 'kept isolated')"),
+      );
+    },
+  );
+
+  test('protection UI does not hard-code service running states', () {
+    final protectionScreen = File(
+      'lib/features/protection/protection_screen.dart',
+    ).readAsStringSync();
+
+    expect(
+      protectionScreen,
+      contains('_serviceLabel(state.coreServiceStatus)'),
+    );
+    expect(protectionScreen, contains('Protection Enabled'));
+    expect(
+      protectionScreen,
+      isNot(contains("_CheckRow('Core Service', 'Running')")),
+    );
   });
 }

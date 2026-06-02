@@ -14,4 +14,19 @@ void main() {
     expect(repository.load(), hasLength(1));
     expect(repository.load().single.message, 'App started');
   });
+
+  test('corrupt local event history is recovered without crashing', () async {
+    SharedPreferences.setMockInitialValues({
+      'zentor.local_events.v1': '{this is not valid json',
+    });
+    final preferences = await SharedPreferences.getInstance();
+    final repository = LocalEventRepository(preferences);
+
+    expect(repository.load(), isEmpty);
+
+    final event = await repository.add('scan_started', 'Scan started');
+    expect(event.type, 'scan_started');
+    expect(repository.load(), hasLength(1));
+    expect(repository.load().single.message, 'Scan started');
+  });
 }
