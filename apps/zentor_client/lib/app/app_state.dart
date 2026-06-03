@@ -324,6 +324,9 @@ class ZentorController extends StateNotifier<ZentorState> {
       config: config,
       events: _eventRepository.load(),
       cloudStatus: CloudStatus.disabled,
+      protectionStatus: config.realtimeProtectionEnabled
+          ? ProtectionStatus.starting
+          : ProtectionStatus.idle,
       appVerificationStatus: _verificationStatusFor(config.protectedAppConfig),
     );
     logEvent('app_started', 'App started');
@@ -332,6 +335,18 @@ class ZentorController extends StateNotifier<ZentorState> {
     unawaitedCheckMalwareEngine();
     unawaitedRefreshQuarantine();
     unawaitedCheckForUpdates(silent: true);
+    if (config.realtimeProtectionEnabled) {
+      _restoreProtectionAfterStartup();
+    }
+  }
+
+  Future<void> _restoreProtectionAfterStartup() async {
+    await logEvent(
+      'protection_restore_requested',
+      'Restoring saved protection state',
+      category: 'protection',
+    );
+    await startProtection(persistPreference: false);
   }
 
   Future<void> logEvent(
@@ -760,7 +775,7 @@ class ZentorController extends StateNotifier<ZentorState> {
     return candidates.where((path) => Directory(path).existsSync()).toList();
   }
 
-  Future<void> startProtection() async {
+  Future<void> startProtection({bool persistPreference = true}) async {
     await logEvent('protection_start_requested', 'Protection start requested');
     state = state.copyWith(
       protectionStatus: ProtectionStatus.starting,
@@ -781,12 +796,18 @@ class ZentorController extends StateNotifier<ZentorState> {
       final watcher = watchPaths.isEmpty
           ? const RealtimeWatcherState(active: false, mode: 'off')
           : await _localCoreClient.startWatch(watchPaths);
+      if (persistPreference && !state.config.realtimeProtectionEnabled) {
+        final updated = state.config.copyWith(realtimeProtectionEnabled: true);
+        await _configRepository.save(updated);
+        state = state.copyWith(config: updated);
+      }
       await logEvent(
         'protection_started',
         'Protection started',
         details: watcher.active
             ? 'Watcher ${watcher.mode}: ${watcher.watchedPaths.join('; ')}'
             : 'Watcher not active',
+        category: 'protection',
       );
       final modeWarning = modeConfigured
           ? null
@@ -825,6 +846,9 @@ class ZentorController extends StateNotifier<ZentorState> {
     if (protectionRun != null) {
       await _apiClient.endProtectionRun(state.config, protectionRun);
     }
+    final updated = state.config.copyWith(realtimeProtectionEnabled: false);
+    await _configRepository.save(updated);
+    state = state.copyWith(config: updated);
     final modeConfigured = await _localCoreClient.configureGuardMode(
       ProtectionMode.off,
     );

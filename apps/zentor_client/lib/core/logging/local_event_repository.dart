@@ -10,8 +10,11 @@ import 'package:uuid/uuid.dart';
 class LocalEventRepository {
   LocalEventRepository(this._preferences);
 
-  static const _eventsKey = 'zentor.local_events.v1';
+  static const _eventsKeyPrefix = 'zentor.local_events.v1';
   static const _uuid = Uuid();
+
+  String get _eventsKey =>
+      '$_eventsKeyPrefix.${Platform.localHostname.toLowerCase()}';
 
   final SharedPreferences _preferences;
 

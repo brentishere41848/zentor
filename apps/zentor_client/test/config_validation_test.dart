@@ -45,4 +45,11 @@ void main() {
       ]);
     },
   );
+  test('real-time protection preference survives config json', () {
+    const config = ZentorConfig(realtimeProtectionEnabled: true);
+
+    final restored = ZentorConfig.fromJson(config.toJson());
+
+    expect(restored.realtimeProtectionEnabled, isTrue);
+  });
 }

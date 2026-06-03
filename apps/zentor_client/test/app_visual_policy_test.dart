@@ -88,4 +88,20 @@ void main() {
       isNot(contains("_CheckRow('Core Service', 'Running')")),
     );
   });
+  test('protection preference is restored after app restart', () {
+    final appState = File('lib/app/app_state.dart').readAsStringSync();
+
+    expect(appState, contains('config.realtimeProtectionEnabled'));
+    expect(appState, contains('_restoreProtectionAfterStartup'));
+    expect(appState, contains('persistPreference: false'));
+  });
+
+  test('local events are scoped to this device', () {
+    final repo = File(
+      'lib/core/logging/local_event_repository.dart',
+    ).readAsStringSync();
+
+    expect(repo, contains('Platform.localHostname'));
+    expect(repo, contains('zentor.local_events.v1'));
+  });
 }

@@ -616,11 +616,11 @@ foreach ($file in $files) {
   [void]$componentsXml.AppendLine("        <File Id=`"$fileId`" Source=`"$(XmlEscape $file.FullName)`" KeyPath=`"yes`" />")
   if ($relativePath -eq "zentor_local_core.exe") {
     [void]$componentsXml.AppendLine("        <ServiceInstall Id=`"AvoraxCoreServiceInstall`" Type=`"ownProcess`" Vital=`"yes`" Name=`"avorax_core_service`" DisplayName=`"Avorax Core Service`" Description=`"Provides local scanning, native engine loading, quarantine, scan jobs, and local protection state for Avorax Anti-Virus.`" Start=`"auto`" Account=`"LocalSystem`" ErrorControl=`"normal`" Arguments=`"--service`" />")
-    [void]$componentsXml.AppendLine("        <ServiceControl Id=`"AvoraxCoreServiceControl`" Name=`"avorax_core_service`" Stop=`"both`" Remove=`"uninstall`" Wait=`"yes`" />")
+    [void]$componentsXml.AppendLine("        <ServiceControl Id=`"AvoraxCoreServiceControl`" Name=`"avorax_core_service`" Start=`"install`" Stop=`"both`" Remove=`"uninstall`" Wait=`"yes`" />")
   }
   if ($relativePath -eq "avorax_guard_service.exe") {
     [void]$componentsXml.AppendLine("        <ServiceInstall Id=`"AvoraxGuardServiceInstall`" Type=`"ownProcess`" Vital=`"yes`" Name=`"avorax_guard_service`" DisplayName=`"Avorax Guard Service`" Description=`"Provides real-time protection, process monitoring, driver communication, and threat response for Avorax Anti-Virus.`" Start=`"auto`" Account=`"LocalSystem`" ErrorControl=`"normal`" Arguments=`"--service`" />")
-    [void]$componentsXml.AppendLine("        <ServiceControl Id=`"AvoraxGuardServiceControl`" Name=`"avorax_guard_service`" Stop=`"both`" Remove=`"uninstall`" Wait=`"yes`" />")
+    [void]$componentsXml.AppendLine("        <ServiceControl Id=`"AvoraxGuardServiceControl`" Name=`"avorax_guard_service`" Start=`"install`" Stop=`"both`" Remove=`"uninstall`" Wait=`"yes`" />")
   }
   if ($relativePath -eq "avorax_update_service.exe") {
     [void]$componentsXml.AppendLine("        <ServiceInstall Id=`"AvoraxUpdateServiceInstall`" Type=`"ownProcess`" Vital=`"yes`" Name=`"avorax_update_service`" DisplayName=`"Avorax Update Service`" Description=`"Applies verified Avorax updates, manages rollback, and updates Avorax components safely.`" Start=`"demand`" Account=`"LocalSystem`" ErrorControl=`"normal`" Arguments=`"--service`" />")

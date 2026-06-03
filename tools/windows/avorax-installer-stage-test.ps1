@@ -118,9 +118,13 @@ foreach ($wxs in $wxsFiles) {
     if ($content -notmatch $serviceControlPattern) {
       Add-CheckError "Installer WiX source does not manage $serviceName during uninstall/repair."
     }
-    $startDuringInstallPattern = "<ServiceControl[^>]+Name=`"$serviceName`"[^>]+Start=`"both`""
-    if ($content -match $startDuringInstallPattern) {
-      Add-CheckError "Installer WiX source starts $serviceName during MSI install; services must be installed without immediate start so non-elevated MSI launches do not fail at StartServices."
+    $startDuringRepairPattern = "<ServiceControl[^>]+Name=`"$serviceName`"[^>]+Start=`"both`""
+    if ($content -match $startDuringRepairPattern) {
+      Add-CheckError "Installer WiX source starts $serviceName during repair/uninstall as well as install; use Start=install only so repairs do not revive stale services."
+    }
+    $startDuringInstallPattern = "<ServiceControl[^>]+Name=`"$serviceName`"[^>]+Start=`"install`""
+    if ($content -notmatch $startDuringInstallPattern) {
+      Add-CheckError "Installer WiX source must start $serviceName after install so protection services are not left stopped."
     }
   }
   $coreServiceOnLocalCorePattern = '<File[^>]+Source="[^"]*zentor_local_core\.exe"[^>]*>\s*<ServiceInstall[^>]+Name="avorax_core_service"'
