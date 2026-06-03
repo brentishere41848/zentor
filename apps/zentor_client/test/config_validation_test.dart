@@ -28,4 +28,21 @@ void main() {
     );
     expect(valid.validateCloudConfiguration(), isEmpty);
   });
+
+  test(
+    'ransomware protection paths and trusted processes survive config json',
+    () {
+      const config = ZentorConfig(
+        ransomwareProtectedRoots: ['C:/Users/Test/Documents'],
+        ransomwareTrustedProcesses: ['C:/Program Files/Backup/backup.exe'],
+      );
+
+      final restored = ZentorConfig.fromJson(config.toJson());
+
+      expect(restored.ransomwareProtectedRoots, ['C:/Users/Test/Documents']);
+      expect(restored.ransomwareTrustedProcesses, [
+        'C:/Program Files/Backup/backup.exe',
+      ]);
+    },
+  );
 }

@@ -410,6 +410,8 @@ class ZentorConfig {
     this.scanPaths = const [],
     this.realtimeProtectionEnabled = false,
     this.protectionMode = ProtectionMode.balanced,
+    this.ransomwareProtectedRoots = const [],
+    this.ransomwareTrustedProcesses = const [],
   });
 
   final String apiBaseUrl;
@@ -421,6 +423,8 @@ class ZentorConfig {
   final List<String> scanPaths;
   final bool realtimeProtectionEnabled;
   final ProtectionMode protectionMode;
+  final List<String> ransomwareProtectedRoots;
+  final List<String> ransomwareTrustedProcesses;
 
   bool get hasCloudConfiguration =>
       apiBaseUrl.trim().isNotEmpty &&
@@ -453,6 +457,8 @@ class ZentorConfig {
     List<String>? scanPaths,
     bool? realtimeProtectionEnabled,
     ProtectionMode? protectionMode,
+    List<String>? ransomwareProtectedRoots,
+    List<String>? ransomwareTrustedProcesses,
   }) {
     return ZentorConfig(
       apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
@@ -466,6 +472,10 @@ class ZentorConfig {
       realtimeProtectionEnabled:
           realtimeProtectionEnabled ?? this.realtimeProtectionEnabled,
       protectionMode: protectionMode ?? this.protectionMode,
+      ransomwareProtectedRoots:
+          ransomwareProtectedRoots ?? this.ransomwareProtectedRoots,
+      ransomwareTrustedProcesses:
+          ransomwareTrustedProcesses ?? this.ransomwareTrustedProcesses,
     );
   }
 
@@ -479,11 +489,15 @@ class ZentorConfig {
     'scanPaths': scanPaths,
     'realtimeProtectionEnabled': realtimeProtectionEnabled,
     'protectionMode': protectionMode.name,
+    'ransomwareProtectedRoots': ransomwareProtectedRoots,
+    'ransomwareTrustedProcesses': ransomwareTrustedProcesses,
   };
 
   factory ZentorConfig.fromJson(Map<String, Object?> json) {
     final appJson = json['protectedAppConfig'];
     final scanPathsJson = json['scanPaths'];
+    final ransomwareProtectedRootsJson = json['ransomwareProtectedRoots'];
+    final ransomwareTrustedProcessesJson = json['ransomwareTrustedProcesses'];
     return ZentorConfig(
       apiBaseUrl: json['apiBaseUrl'] as String? ?? '',
       projectId: json['projectId'] as String? ?? '',
@@ -503,6 +517,12 @@ class ZentorConfig {
         (mode) => mode.name == json['protectionMode'],
         orElse: () => ProtectionMode.balanced,
       ),
+      ransomwareProtectedRoots: ransomwareProtectedRootsJson is List
+          ? ransomwareProtectedRootsJson.whereType<String>().toList()
+          : const [],
+      ransomwareTrustedProcesses: ransomwareTrustedProcessesJson is List
+          ? ransomwareTrustedProcessesJson.whereType<String>().toList()
+          : const [],
     );
   }
 }
@@ -666,6 +686,8 @@ class LocalEvent {
     required this.message,
     required this.createdAt,
     this.details,
+    this.category = 'app',
+    this.severity = 'info',
   });
 
   final String id;
@@ -673,6 +695,8 @@ class LocalEvent {
   final String message;
   final DateTime createdAt;
   final String? details;
+  final String category;
+  final String severity;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -680,6 +704,8 @@ class LocalEvent {
     'message': message,
     'createdAt': createdAt.toIso8601String(),
     'details': details,
+    'category': category,
+    'severity': severity,
   };
 
   factory LocalEvent.fromJson(Map<String, Object?> json) => LocalEvent(
@@ -690,6 +716,8 @@ class LocalEvent {
         DateTime.tryParse(json['createdAt'] as String? ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0),
     details: json['details'] as String?,
+    category: json['category'] as String? ?? 'app',
+    severity: json['severity'] as String? ?? 'info',
   );
 }
 

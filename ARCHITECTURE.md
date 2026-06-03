@@ -64,7 +64,7 @@ Important files:
 - `apps/zentor_client/lib/core/config/config_repository.dart`: persisted settings plus build-time config overlay.
 - `apps/zentor_client/lib/core/updates/update_service.dart`: feed/package update selection and `.aup` verification/apply handoff.
 
-The UI must remain honest: if a service, driver, ML model, cloud provider, or protection mode is disabled/unavailable, it should show an attention/unavailable state rather than claiming full protection.
+The UI must remain honest: if a service, driver, ML model, cloud provider, or protection mode is disabled/unavailable, it should show an attention/unavailable state rather than claiming full protection. Settings now persist ransomware protected folders and trusted backup/sync process allowlists, pass them to local core policy, and include protected folders in best-effort watch planning when they exist.
 
 ## Scan flow
 
@@ -107,7 +107,7 @@ The local core has a richer quarantine store than the native engine's create-onl
 
 The guard service provides best-effort user-mode protection and driver-facing policy evaluation. Kernel/pre-execution enforcement requires the Windows minifilter path to be built, installed, signed, running, communicating with the service, and passing self-test.
 
-User-mode protection should monitor high-risk folders, debounce events, wait for files to become stable, avoid rescanning unchanged files, and publish structured events to the UI. Ransomware protection should focus on protected folders and harmless simulation-tested behaviors such as rapid modifications, rename/write/delete bursts, extension changes, and ransom-note-like filenames.
+User-mode protection monitors configured scan/protected folders where available, debounces events, waits for files to become stable, avoids rescanning unchanged files, and publishes structured events to the UI. Ransomware protection focuses on configured protected folders and harmless simulation-tested behaviors such as rapid modifications, rename/write/delete bursts, extension changes, and ransom-note-like filenames. Trusted backup/sync process allowlists are exact normalized paths and suppress ransomware activity only for those processes.
 
 ## Updates
 
@@ -138,4 +138,4 @@ Some Windows service/update tests may require elevation. Driver gates require a 
 
 ## Guard/protection hardening notes
 
-The guard service evaluates pre-execution requests with a strict metadata provenance boundary. Publisher/signature trust requires both a trusted publisher match and a trusted verifier source; hash trust prefers locally computed SHA-256 and only falls back to supplied hashes when the supplier is explicitly trusted. Ransomware protection logic now accepts a policy object with protected roots and trusted process allowlists so future UI/settings work can configure protected folders without changing detection semantics.
+The guard service evaluates pre-execution requests with a strict metadata provenance boundary. Publisher/signature trust requires both a trusted publisher match and a trusted verifier source; hash trust prefers locally computed SHA-256 and only falls back to supplied hashes when the supplier is explicitly trusted. Ransomware protection logic accepts a policy object with protected roots and trusted process allowlists, and the Flutter settings UI now persists/sends those values through local core IPC. Local event history stores category/severity metadata and the Logs screen summarizes protection events and warnings.

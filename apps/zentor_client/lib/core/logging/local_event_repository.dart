@@ -40,13 +40,21 @@ class LocalEventRepository {
     }
   }
 
-  Future<LocalEvent> add(String type, String message, {String? details}) async {
+  Future<LocalEvent> add(
+    String type,
+    String message, {
+    String? details,
+    String category = 'app',
+    String severity = 'info',
+  }) async {
     final event = LocalEvent(
       id: _uuid.v4(),
       type: type,
       message: message,
       createdAt: DateTime.now().toUtc(),
       details: details,
+      category: category,
+      severity: severity,
     );
     final events = [event, ...load()].take(200).toList();
     await _preferences.setString(

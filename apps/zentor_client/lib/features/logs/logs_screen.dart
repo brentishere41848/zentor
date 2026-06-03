@@ -42,6 +42,29 @@ class LogsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 18),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _EventSummaryCard(
+                label: 'Protection events',
+                value: state.events
+                    .where((event) => event.category == 'protection')
+                    .length
+                    .toString(),
+                icon: Icons.shield_outlined,
+              ),
+              _EventSummaryCard(
+                label: 'Warnings',
+                value: state.events
+                    .where((event) => event.severity == 'warning')
+                    .length
+                    .toString(),
+                icon: Icons.warning_amber_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
           if (state.events.isEmpty)
             const ZentorEmptyState(
               title: 'No local events',
@@ -76,7 +99,7 @@ class LogsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${event.type} • ${event.createdAt.toLocal()}${event.details == null ? '' : ' • ${event.details}'}',
+                            '${event.category}/${event.severity} • ${event.type} • ${event.createdAt.toLocal()}${event.details == null ? '' : ' • ${event.details}'}',
                             style: const TextStyle(
                               color: ZentorColors.textSecondary,
                             ),
@@ -87,6 +110,53 @@ class LogsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventSummaryCard extends StatelessWidget {
+  const _EventSummaryCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 190),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ZentorColors.elevatedSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ZentorColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: ZentorColors.primaryAccent),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                label,
+                style: const TextStyle(color: ZentorColors.textSecondary),
+              ),
+            ],
+          ),
         ],
       ),
     );

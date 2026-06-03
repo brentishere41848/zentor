@@ -6,7 +6,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use zentor_native_engine::{
@@ -279,6 +280,17 @@ fn handle(command: CoreCommand) -> serde_json::Value {
                 Err(error) => json!({"ok": false, "error": error.to_string()}),
             }
         }
+        "configure_ransomware_guard" => match write_ransomware_guard_config(
+            command.protected_roots.unwrap_or_default(),
+            command.trusted_process_allowlist.unwrap_or_default(),
+        ) {
+            Ok(path) => json!({"ok": true, "ransomware_guard_config_path": path}),
+            Err(error) => json!({"ok": false, "error": error.to_string()}),
+        },
+        "list_ransomware_guard_config" => match read_ransomware_guard_config() {
+            Ok(config) => json!({"ok": true, "config": config}),
+            Err(error) => json!({"ok": false, "error": error.to_string()}),
+        },
         "remove_allowlist_entry" => json!({
             "ok": false,
             "error": "command is defined for v1 IPC but not enabled without explicit UI support"
@@ -1203,6 +1215,77 @@ fn sha256_for_file(path: &Path) -> anyhow::Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PersistedRansomwareGuardConfig {
+    protected_roots: Vec<String>,
+    trusted_process_allowlist: Vec<String>,
+    updated_at: DateTime<Utc>,
+    source: String,
+}
+
+fn write_ransomware_guard_config(
+    protected_roots: Vec<String>,
+    trusted_process_allowlist: Vec<String>,
+) -> anyhow::Result<String> {
+    let protected_roots = normalize_ransomware_paths(protected_roots, true)?;
+    let trusted_process_allowlist = normalize_ransomware_paths(trusted_process_allowlist, false)?;
+    let path = ransomware_guard_config_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let config = PersistedRansomwareGuardConfig {
+        protected_roots,
+        trusted_process_allowlist,
+        updated_at: Utc::now(),
+        source: "avorax_local_core".to_string(),
+    };
+    std::fs::write(&path, serde_json::to_string_pretty(&config)?)?;
+    Ok(path.display().to_string())
+}
+
+fn read_ransomware_guard_config() -> anyhow::Result<PersistedRansomwareGuardConfig> {
+    let path = ransomware_guard_config_path();
+    if !path.exists() {
+        return Ok(PersistedRansomwareGuardConfig {
+            protected_roots: Vec::new(),
+            trusted_process_allowlist: Vec::new(),
+            updated_at: Utc::now(),
+            source: "default".to_string(),
+        });
+    }
+    let raw = std::fs::read_to_string(path)?;
+    Ok(serde_json::from_str(&raw)?)
+}
+
+fn ransomware_guard_config_path() -> PathBuf {
+    if let Ok(path) = std::env::var("AVORAX_RANSOMWARE_GUARD_CONFIG") {
+        return PathBuf::from(path);
+    }
+    guard_config_base().join("ransomware_guard.json")
+}
+
+fn normalize_ransomware_paths(paths: Vec<String>, protected: bool) -> anyhow::Result<Vec<String>> {
+    let mut normalized = Vec::new();
+    for raw in paths {
+        let value = raw.trim().replace('\\', "/");
+        if value.is_empty() {
+            continue;
+        }
+        if protected && ransomware_root_too_broad(&value) {
+            return Err(anyhow::anyhow!("protected root is too broad: {value}"));
+        }
+        if !normalized.iter().any(|existing| existing == &value) {
+            normalized.push(value);
+        }
+    }
+    Ok(normalized)
+}
+
+fn ransomware_root_too_broad(path: &str) -> bool {
+    let trimmed = path.trim().trim_end_matches('/');
+    trimmed == "/" || trimmed.len() <= 2 || trimmed.ends_with(':')
+}
+
 fn write_guard_mode_config(raw_mode: &str) -> anyhow::Result<String> {
     let mode = normalize_guard_mode(raw_mode)
         .ok_or_else(|| anyhow::anyhow!("unsupported guard mode: {raw_mode}"))?;
@@ -1338,6 +1421,65 @@ mod tests {
     }
 
     #[test]
+    fn configure_ransomware_guard_persists_protected_roots_and_trusted_processes() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("ransomware_guard.json");
+        unsafe {
+            std::env::set_var("AVORAX_RANSOMWARE_GUARD_CONFIG", &config_path);
+        }
+        let command: CoreCommand = serde_json::from_value(json!({
+            "command": "configure_ransomware_guard",
+            "protected_roots": ["C:/Users/Test/Documents", " C:/Users/Test/Documents ", "C:/Users/Test/Pictures"],
+            "trusted_process_allowlist": ["C:/Program Files/Backup/backup.exe", ""]
+        }))
+        .unwrap();
+
+        let response = handle(command);
+
+        assert_eq!(response["ok"], true);
+        let persisted: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&config_path).unwrap()).unwrap();
+        assert_eq!(
+            persisted["protected_roots"],
+            json!(["C:/Users/Test/Documents", "C:/Users/Test/Pictures"])
+        );
+        assert_eq!(
+            persisted["trusted_process_allowlist"],
+            json!(["C:/Program Files/Backup/backup.exe"])
+        );
+        unsafe {
+            std::env::remove_var("AVORAX_RANSOMWARE_GUARD_CONFIG");
+        }
+    }
+
+    #[test]
+    fn configure_ransomware_guard_rejects_root_protected_folder() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("ransomware_guard.json");
+        unsafe {
+            std::env::set_var("AVORAX_RANSOMWARE_GUARD_CONFIG", &config_path);
+        }
+        let command: CoreCommand = serde_json::from_value(json!({
+            "command": "configure_ransomware_guard",
+            "protected_roots": ["C:/"],
+            "trusted_process_allowlist": []
+        }))
+        .unwrap();
+
+        let response = handle(command);
+
+        assert_eq!(response["ok"], false);
+        assert!(response["error"]
+            .as_str()
+            .unwrap()
+            .contains("protected root is too broad"));
+        assert!(!config_path.exists());
+        unsafe {
+            std::env::remove_var("AVORAX_RANSOMWARE_GUARD_CONFIG");
+        }
+    }
+
+    #[test]
     fn start_watch_command_returns_best_effort_watcher_for_existing_paths() {
         let dir = tempdir().unwrap();
         let command = CoreCommand {
@@ -1358,6 +1500,8 @@ mod tests {
             user_note: None,
             previous_verdict: None,
             protection_mode: None,
+            protected_roots: None,
+            trusted_process_allowlist: None,
         };
 
         let response = handle(command);

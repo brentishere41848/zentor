@@ -254,3 +254,49 @@ Lead-engineer product-hardening pass across the Avorax repository. Goal is to mo
 1. Add UI/settings persistence for ransomware protected roots and trusted process allowlists.
 2. Add recent protection/ransomware event history to the Flutter UI.
 3. Add a release tag above current latest rather than moving the already-published `v0.2.2`.
+
+
+## 2026-06-03 hardening continuation 3
+
+### Completed changes
+
+- Added local core `configure_ransomware_guard` IPC support with persistence for protected roots, trusted process allowlists, update timestamps, and validation that rejects broad root-style protected folders.
+- Extended `CoreCommand` with `protected_roots` and `trusted_process_allowlist` fields.
+- Extended shared Dart `ZentorConfig` with `ransomwareProtectedRoots` and `ransomwareTrustedProcesses` JSON/copyWith support.
+- Added Flutter settings controls for ransomware protected folders and trusted backup/sync process paths, with save wiring through the app controller to local core IPC.
+- Included configured ransomware protected roots in best-effort real-time watch path planning when those paths exist.
+- Extended local event persistence with category/severity metadata and updated the Logs screen to summarize protection events and warnings.
+- Updated TODO/architecture/security docs to mark P0/P1 complete and the newly implemented P2 protection settings/logging work done.
+
+### Files modified
+
+- `TODO.md`
+- `RUN_LOG.md`
+- `ARCHITECTURE.md`
+- `SECURITY_MODEL.md`
+- `core/zentor_local_core/src/api/mod.rs`
+- `core/zentor_local_core/src/main.rs`
+- `packages/zentor_protocol/lib/zentor_protocol.dart`
+- `apps/zentor_client/lib/app/app_state.dart`
+- `apps/zentor_client/lib/core/local_core/local_core_client.dart`
+- `apps/zentor_client/lib/core/logging/local_event_repository.dart`
+- `apps/zentor_client/lib/features/logs/logs_screen.dart`
+- `apps/zentor_client/lib/features/settings/settings_screen.dart`
+- `apps/zentor_client/test/config_validation_test.dart`
+- `apps/zentor_client/test/local_event_test.dart`
+
+### Tests/checks run
+
+- `cargo test --manifest-path core/zentor_local_core/Cargo.toml` passed: 69 tests.
+- `cargo test --manifest-path core/zentor_guard_service/Cargo.toml` passed: 22 tests.
+- `cargo test --manifest-path core/zentor_native_engine/Cargo.toml` passed: 35 tests.
+- `cd apps/zentor_client && flutter analyze` passed with no issues.
+- `cd apps/zentor_client && flutter test` passed: 39 tests.
+- `cd apps/zentor_client && flutter build windows --debug` produced `build\windows\x64\runner\Debug\Avorax.exe`.
+
+### Current status
+
+- No known remaining P0/P1 hardening gaps are tracked after this pass.
+- Remaining open items are P3/P4 production/release hardening or optional stretch work: native-engine guard cache, update apply rollback hardening, production update-key policy, expanded CI/release gates, protocol test-dependency cleanup, plugin/cloud-provider interfaces, accessibility, support bundles, and benchmarks.
+- Existing Rust warnings remain for developmental/compatibility paths, but the verification commands above passed.
+- Signed Windows driver validation still requires a signed/installed/self-tested driver report in a provisioned environment.

@@ -334,8 +334,20 @@ class ZentorController extends StateNotifier<ZentorState> {
     unawaitedCheckForUpdates(silent: true);
   }
 
-  Future<void> logEvent(String type, String message, {String? details}) async {
-    await _eventRepository.add(type, message, details: details);
+  Future<void> logEvent(
+    String type,
+    String message, {
+    String? details,
+    String category = 'app',
+    String severity = 'info',
+  }) async {
+    await _eventRepository.add(
+      type,
+      message,
+      details: details,
+      category: category,
+      severity: severity,
+    );
     if (!mounted) return;
     state = state.copyWith(events: _eventRepository.load());
   }
@@ -739,7 +751,10 @@ class ZentorController extends StateNotifier<ZentorState> {
   }
 
   List<String> _realtimeWatchPaths() {
-    final candidates = <String>{...state.config.scanPaths};
+    final candidates = <String>{
+      ...state.config.scanPaths,
+      ...state.config.ransomwareProtectedRoots,
+    };
     final appPath = state.config.protectedAppConfig.appPath.trim();
     if (appPath.isNotEmpty) candidates.add(appPath);
     return candidates.where((path) => Directory(path).existsSync()).toList();
@@ -846,6 +861,48 @@ class ZentorController extends StateNotifier<ZentorState> {
           ? null
           : 'Saved UI profile, but Avorax could not write the shared Guard mode config. The running service may keep its previous mode.',
     );
+  }
+
+  Future<void> updateRansomwareGuardSettings({
+    required List<String> protectedRoots,
+    required List<String> trustedProcesses,
+  }) async {
+    final normalizedRoots = _normalizeUserPaths(protectedRoots);
+    final normalizedTrustedProcesses = _normalizeUserPaths(trustedProcesses);
+    final updated = state.config.copyWith(
+      ransomwareProtectedRoots: normalizedRoots,
+      ransomwareTrustedProcesses: normalizedTrustedProcesses,
+    );
+    await _configRepository.save(updated);
+    final coreConfigured = await _localCoreClient.configureRansomwareGuard(
+      protectedRoots: normalizedRoots,
+      trustedProcesses: normalizedTrustedProcesses,
+    );
+    await logEvent(
+      'ransomware_guard_settings_changed',
+      'Ransomware guard settings changed',
+      details:
+          '${normalizedRoots.length} protected roots; ${normalizedTrustedProcesses.length} trusted processes',
+      category: 'protection',
+      severity: coreConfigured ? 'info' : 'warning',
+    );
+    state = state.copyWith(
+      config: updated,
+      clearError: coreConfigured,
+      errorMessage: coreConfigured
+          ? null
+          : 'Saved ransomware settings in the app, but Avorax could not write the shared guard policy config.',
+    );
+  }
+
+  List<String> _normalizeUserPaths(List<String> paths) {
+    final normalized = <String>[];
+    for (final raw in paths) {
+      final value = raw.trim().replaceAll('\\\\', '/');
+      if (value.isEmpty || normalized.contains(value)) continue;
+      normalized.add(value);
+    }
+    return normalized;
   }
 
   Future<void> runProtectionSelfTest() async {

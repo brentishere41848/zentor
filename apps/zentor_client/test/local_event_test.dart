@@ -29,4 +29,26 @@ void main() {
     expect(repository.load(), hasLength(1));
     expect(repository.load().single.message, 'Scan started');
   });
+  test(
+    'protection and ransomware events persist category and severity',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final repository = LocalEventRepository(preferences);
+
+      final event = await repository.add(
+        'ransomware_guard_settings_changed',
+        'Ransomware guard settings changed',
+        details: '2 protected roots',
+        category: 'protection',
+        severity: 'warning',
+      );
+
+      expect(event.category, 'protection');
+      expect(event.severity, 'warning');
+      final restored = repository.load().single;
+      expect(restored.category, 'protection');
+      expect(restored.severity, 'warning');
+    },
+  );
 }

@@ -21,6 +21,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _endpoint;
   late final TextEditingController _projectId;
   late final TextEditingController _publicKey;
+  late final TextEditingController _ransomwareProtectedRoots;
+  late final TextEditingController _ransomwareTrustedProcesses;
   bool _developerOptions = false;
 
   @override
@@ -30,6 +32,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _endpoint = TextEditingController(text: config.apiBaseUrl);
     _projectId = TextEditingController(text: config.projectId);
     _publicKey = TextEditingController(text: config.publicClientKey);
+    _ransomwareProtectedRoots = TextEditingController(
+      text: config.ransomwareProtectedRoots.join('\n'),
+    );
+    _ransomwareTrustedProcesses = TextEditingController(
+      text: config.ransomwareTrustedProcesses.join('\n'),
+    );
     _developerOptions = config.developerOverrideEnabled;
   }
 
@@ -38,6 +46,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _endpoint.dispose();
     _projectId.dispose();
     _publicKey.dispose();
+    _ransomwareProtectedRoots.dispose();
+    _ransomwareTrustedProcesses.dispose();
     super.dispose();
   }
 
@@ -192,6 +202,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               state.config.realtimeProtectionEnabled
                   ? 'Enabled for protected locations'
                   : 'Off',
+            ),
+            const SizedBox(height: 12),
+            ZentorTextField(
+              controller: _ransomwareProtectedRoots,
+              label: 'Ransomware protected folders',
+              hint: 'One folder per line, e.g. C:/Users/You/Documents',
+              minLines: 2,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 8),
+            ZentorTextField(
+              controller: _ransomwareTrustedProcesses,
+              label: 'Trusted backup/sync processes',
+              hint:
+                  'One executable path per line, e.g. C:/Program Files/Backup/backup.exe',
+              minLines: 2,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 8),
+            ZentorButton(
+              label: 'Save ransomware protection settings',
+              icon: Icons.folder_special_outlined,
+              secondary: true,
+              onPressed: state.loading
+                  ? null
+                  : () => controller.updateRansomwareGuardSettings(
+                      protectedRoots: _splitPathLines(
+                        _ransomwareProtectedRoots.text,
+                      ),
+                      trustedProcesses: _splitPathLines(
+                        _ransomwareTrustedProcesses.text,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -352,6 +395,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ],
     );
   }
+
+  List<String> _splitPathLines(String raw) => raw
+      .split(RegExp(r'[\r\n]+'))
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
 
   Future<void> _saveDeveloperOverride(
     ZentorController controller, {

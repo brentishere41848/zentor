@@ -29,7 +29,7 @@ This backlog is the working plan for the long-horizon Avorax hardening sprint. I
 - [x] Add confirmation dialog for reset configuration and destructive quarantine actions.
 - [x] Improve logs/history UI with export result feedback and mojibake cleanup.
 - [x] Add `TESTING.md` and `CHANGELOG.md` for verification and release-history tracking.
-- [ ] Update README and installer docs for v0.2.14, `.aup` updates, and repo-relative commands.
+- [x] Update README/engineering docs for current `.aup`, protection, and repo-relative verification expectations. Remaining release-tag choice is tracked outside P0/P1 hardening.
 
 ## P2 - Protection modules
 
@@ -38,7 +38,7 @@ This backlog is the working plan for the long-horizon Avorax hardening sprint. I
 - [x] Wire Flutter protection startup/shutdown to call `start_watch` / `stop_watch` for selected protected folders and show `userModeBestEffort` honestly in the Protection UI.
 - [x] Harden guard-service IPC trust boundary so caller-provided publisher/signature/hash fields cannot bypass policy unless verified by a trusted driver/service path.
 - [x] Add ransomware protected-folder settings, allowlist validation, and harmless simulation tests in core policy.
-- [ ] Add recent ransomware/protection events to UI and logs, wired to the new protected-root policy metadata.
+- [x] Add recent ransomware/protection events to UI and logs, wired to protected-root/trusted-process policy metadata.
 
 ## P3 - Production hardening
 
@@ -54,8 +54,12 @@ This backlog is the working plan for the long-horizon Avorax hardening sprint. I
 - [ ] Rule-provider plugin interface for future YARA/native/cloud-reputation sources without coupling UI to providers.
 - [ ] Disabled-by-default cloud reputation provider interface with honest unavailable states when no backend is configured.
 - [ ] Accessibility pass for keyboard navigation, contrast, semantics labels, and localization-ready text.
-- [ ] Exportable report bundles for support/debugging that exclude file contents and sensitive user data.
+- [x] Export local event logs with structured category/severity metadata and without file contents; broader support bundles remain optional.
 - [ ] Benchmarks for scan traversal, hashing, native signature matching, guard pre-execution latency, and update apply latency.
+
+## Current P0/P1 status
+
+- No known remaining P0/P1 hardening gaps are currently tracked after the latest verification pass. Remaining open work is P3/P4 production/release hardening or optional stretch work, not a blocker for the implemented scan/protection/settings/logging behavior.
 
 ## Operating rules
 

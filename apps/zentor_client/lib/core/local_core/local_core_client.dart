@@ -248,6 +248,18 @@ class LocalCoreClient {
     return response?['ok'] == true;
   }
 
+  Future<bool> configureRansomwareGuard({
+    required List<String> protectedRoots,
+    required List<String> trustedProcesses,
+  }) async {
+    final response = await _call({
+      'command': 'configure_ransomware_guard',
+      'protected_roots': protectedRoots,
+      'trusted_process_allowlist': trustedProcesses,
+    });
+    return response?['ok'] == true;
+  }
+
   Future<RealtimeWatcherState> startWatch(List<String> paths) async {
     final response = await _call({'command': 'start_watch', 'paths': paths});
     if (response == null || response['ok'] == false) {

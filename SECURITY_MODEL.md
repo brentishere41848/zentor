@@ -120,18 +120,19 @@ Settings are local user preferences, not authoritative security proof. They must
 - Real-time protection enabled/disabled.
 - Ransomware protection enabled/disabled.
 - Scan exclusions.
-- Protected folders.
+- Protected folders for ransomware monitoring.
+- Trusted backup/sync process allowlists for ransomware-policy suppression.
 - Allowlist entries.
 - Scan sensitivity.
 - Automatic update preference.
 - Notifications.
 - Cloud/developer overrides.
 
-Unsafe broad allowlist/exclusion roots such as drive roots, system directories, `/`, `/usr`, `/bin`, `/sbin`, and `/etc` should be rejected or require exceptional explicit handling.
+Unsafe broad allowlist/exclusion/protected-root values such as drive roots, system directories, `/`, `/usr`, `/bin`, `/sbin`, and `/etc` should be rejected or require exceptional explicit handling. Current ransomware protected-root IPC rejects broad root-style protected folders before persistence.
 
 ## Logging and privacy
 
-Avorax should log structured security events and operational errors without leaking file contents.
+Avorax logs structured security/protection events and operational errors without leaking file contents. Local events include type, timestamp, message, optional details, category, and severity; user-initiated export serializes those fields as JSON.
 
 Allowed logging:
 
@@ -168,4 +169,4 @@ Guard pre-execution decisions must not trust caller-provided publisher, signatur
 
 ### Ransomware protected roots
 
-Ransomware evaluation supports explicit protected roots and trusted process allowlists. If protected roots are configured, only activity inside those roots contributes to modification thresholds; trusted backup/sync processes can be suppressed by exact normalized path. Tests use harmless temporary/path-only fixtures and do not encrypt or damage files.
+Ransomware evaluation supports explicit protected roots and trusted process allowlists. If protected roots are configured, only activity inside those roots contributes to modification thresholds; trusted backup/sync processes can be suppressed by exact normalized path. Flutter settings persist these lists, local core IPC writes the shared policy config, protected roots are included in user-mode watch planning, and local event history records protection/ransomware settings changes with category/severity metadata. Tests use harmless temporary/path-only fixtures and do not encrypt or damage files.

@@ -16,6 +16,8 @@ pub struct CoreCommand {
     pub user_note: Option<String>,
     pub previous_verdict: Option<String>,
     pub protection_mode: Option<String>,
+    pub protected_roots: Option<Vec<String>>,
+    pub trusted_process_allowlist: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
