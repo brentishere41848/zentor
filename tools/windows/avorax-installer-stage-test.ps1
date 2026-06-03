@@ -44,6 +44,7 @@ foreach ($required in @(
   @("docs\real-time-protection.md", "real-time protection documentation"),
   @("tools\windows\avorax-installed-smoke-test.ps1", "installed smoke test"),
   @("tools\update\avorax-build-update-package.ps1", "update package builder"),
+  @("tools\update\avorax-dev-sign-manifest.py", "development update manifest signer"),
   @("install-manifest.json", "install manifest")
 )) {
   Require-Path $required[0] $required[1]

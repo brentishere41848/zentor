@@ -399,6 +399,7 @@ Copy-RequiredTree $zneToolsSourceDir (Join-Path $stageToolsDir "zne") "ZNE self-
 Copy-RequiredTree $intelToolsSourceDir (Join-Path $stageToolsDir "zentor_intel") "safe threat-intel tools"
 Copy-RequiredTree $simulatorsSourceDir (Join-Path $stageToolsDir "simulators") "safe simulator tools"
 Copy-RequiredTree $updateToolsSourceDir (Join-Path $stageToolsDir "update") "update package tools"
+Assert-StagePath "tools\update\avorax-dev-sign-manifest.py" "development update manifest signer"
 
 $coreSource = $null
 if (Test-Path $localCoreExe) {

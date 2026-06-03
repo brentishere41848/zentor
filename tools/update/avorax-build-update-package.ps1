@@ -7,6 +7,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+function Write-Utf8NoBom([string]$Path, [string]$Content) {
+  $encoding = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $payloadSource = Join-Path $root $PayloadRoot
 if (-not (Test-Path -LiteralPath $payloadSource)) {
@@ -107,7 +112,7 @@ $manifest = [ordered]@{
 
 $manifestPath = Join-Path $work "manifest.json"
 $sigPath = Join-Path $work "manifest.sig"
-($manifest | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+Write-Utf8NoBom $manifestPath ($manifest | ConvertTo-Json -Depth 20)
 $signer = $SignerCommand -split " "
 $signerExe = $signer[0]
 $signerArgs = @()
@@ -120,8 +125,11 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sigPath)) {
 }
 
 $packagePath = Join-Path $out "Avorax-AntiVirus-$Version.aup"
+$tempZipPath = Join-Path $out "Avorax-AntiVirus-$Version.aup.zip"
 if (Test-Path -LiteralPath $packagePath) { Remove-Item -LiteralPath $packagePath -Force }
-Compress-Archive -Path (Join-Path $work "*") -DestinationPath $packagePath -Force
+if (Test-Path -LiteralPath $tempZipPath) { Remove-Item -LiteralPath $tempZipPath -Force }
+Compress-Archive -Path (Join-Path $work "*") -DestinationPath $tempZipPath -Force
+Move-Item -LiteralPath $tempZipPath -Destination $packagePath -Force
 $packageHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
 
 $feed = [ordered]@{
@@ -142,7 +150,7 @@ $feed = [ordered]@{
     }
   )
 }
-($feed | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath (Join-Path $out "update-feed.json") -Encoding UTF8
+Write-Utf8NoBom (Join-Path $out "update-feed.json") ($feed | ConvertTo-Json -Depth 10)
 $feedPath = Join-Path $out "update-feed.json"
 Write-Host "Created update package: $packagePath"
 Write-Host "Created update feed: $feedPath"
