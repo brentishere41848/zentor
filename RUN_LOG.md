@@ -393,3 +393,33 @@ Lead-engineer product-hardening pass across the Avorax repository. Goal is to mo
 - The highest-priority broken `avorax_protocol` test setup is fixed and covered by meaningful schema tests.
 - CI now exercises the previously open security/protection/performance gate backlog where feasible on GitHub-hosted Windows runners.
 - Remaining open work is P4-level: accessibility/localization readiness, support bundle export, benchmarks, and optional provider/plugin architecture.
+
+
+## 2026-06-04 hardening continuation 6
+
+### Completed changes
+
+- Added explicit navigation semantics for desktop sidebar items: a `Primary navigation` landmark plus `Current page, <label>` and `Open <label>` labels.
+- Added mobile bottom-navigation current-page semantics and per-destination tooltips.
+- Hardened the desktop sidebar layout by replacing the fixed `Column`/`Spacer` body with a scrollable list so navigation remains reachable and does not overflow on constrained heights.
+- Added `apps/zentor_client/test/navigation_accessibility_test.dart` covering desktop/sidebar and mobile bottom-navigation semantics.
+- Updated `TODO.md` and `CHANGELOG.md` for the completed navigation accessibility slice while leaving broader page-level accessibility/localization work open.
+
+### Files modified
+
+- `TODO.md`
+- `RUN_LOG.md`
+- `CHANGELOG.md`
+- `apps/zentor_client/lib/shared/widgets/zentor_sidebar.dart`
+- `apps/zentor_client/lib/shared/widgets/zentor_bottom_nav.dart`
+- `apps/zentor_client/test/navigation_accessibility_test.dart`
+
+### Tests/checks run
+
+- RED/diagnostic check: initial `flutter test test/navigation_accessibility_test.dart` failed because expected semantics were missing and then exposed a real constrained-height sidebar overflow.
+- Focused rerun passed: `flutter test test/navigation_accessibility_test.dart`.
+
+### Current status
+
+- Navigation accessibility and constrained-height desktop sidebar behavior are improved without changing product capability claims.
+- Remaining open work is P4-level: broader accessibility/localization readiness, support bundle export, benchmarks, and optional provider/plugin architecture.

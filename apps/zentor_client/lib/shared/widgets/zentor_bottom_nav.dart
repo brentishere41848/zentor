@@ -22,17 +22,29 @@ class ZentorBottomNav extends StatelessWidget {
     final selectedIndex = mobileDestinations.indexWhere(
       (destination) => location.startsWith(destination.path),
     );
-    return NavigationBar(
-      selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-      onDestinationSelected: (index) =>
-          context.go(mobileDestinations[index].path),
-      destinations: [
-        for (final destination in mobileDestinations)
-          NavigationDestination(
-            icon: Icon(destination.icon),
-            label: destination.label,
-          ),
-      ],
+    final effectiveSelectedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    final selectedDestination = mobileDestinations[effectiveSelectedIndex];
+    return Semantics(
+      container: true,
+      label: selectedDestination.currentSemanticLabel,
+      explicitChildNodes: true,
+      child: NavigationBar(
+        selectedIndex: effectiveSelectedIndex,
+        onDestinationSelected: (index) =>
+            context.go(mobileDestinations[index].path),
+        destinations: [
+          for (final destination in mobileDestinations)
+            NavigationDestination(
+              icon: Icon(destination.icon),
+              selectedIcon: Icon(
+                destination.icon,
+                semanticLabel: destination.currentSemanticLabel,
+              ),
+              label: destination.label,
+              tooltip: destination.navigationTooltip,
+            ),
+        ],
+      ),
     );
   }
 }

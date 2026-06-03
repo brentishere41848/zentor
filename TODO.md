@@ -54,13 +54,14 @@ This backlog is the working plan for the long-horizon Avorax hardening sprint. I
 
 - [ ] Rule-provider plugin interface for future YARA/native/cloud-reputation sources without coupling UI to providers.
 - [ ] Disabled-by-default cloud reputation provider interface with honest unavailable states when no backend is configured.
-- [ ] Accessibility pass for keyboard navigation, contrast, semantics labels, and localization-ready text.
+- [x] Add explicit desktop/mobile navigation semantics and make the desktop sidebar scroll safely on constrained heights.
+- [ ] Broader accessibility pass for keyboard traversal audits, contrast review, screen-reader coverage across all feature pages, and localization-ready text extraction.
 - [x] Export local event logs with structured category/severity metadata and without file contents; broader support bundles remain optional.
 - [ ] Benchmarks for scan traversal, hashing, native signature matching, guard pre-execution latency, and update apply latency.
 
 ## Current P0/P1 status
 
-- No known remaining P0/P1 hardening gaps are currently tracked after the latest verification pass. Remaining open work is benchmarks, accessibility, support bundles, and optional provider/plugin architecture.
+- No known remaining P0/P1 hardening gaps are currently tracked after the latest verification pass. Remaining open work is benchmarks, broader accessibility/localization readiness, support bundles, and optional provider/plugin architecture.
 
 ## Operating rules
 

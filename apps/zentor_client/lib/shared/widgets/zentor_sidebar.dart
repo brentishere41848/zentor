@@ -10,6 +10,12 @@ class ZentorNavDestination {
   final String path;
   final String label;
   final IconData icon;
+
+  String get openSemanticLabel => 'Open $label';
+
+  String get currentSemanticLabel => 'Current page, $label';
+
+  String get navigationTooltip => 'Open $label';
 }
 
 const zentorDestinations = [
@@ -35,55 +41,69 @@ class ZentorSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      decoration: const BoxDecoration(
-        color: Color(0xFF080D16),
-        border: Border(right: BorderSide(color: ZentorColors.border)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              ZentorMark(size: 42),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Avorax',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+    return Semantics(
+      container: true,
+      label: 'Primary navigation',
+      explicitChildNodes: true,
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        decoration: const BoxDecoration(
+          color: Color(0xFF080D16),
+          border: Border(right: BorderSide(color: ZentorColors.border)),
+        ),
+        child: ListView(
+          children: [
+            const Row(
+              children: [
+                ZentorMark(size: 42),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Avorax',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Security client',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: ZentorColors.textSecondary),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Security client',
-                    style: TextStyle(color: ZentorColors.textSecondary),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            for (final destination in zentorDestinations)
+              _SidebarItem(
+                destination: destination,
+                active: location.startsWith(destination.path),
               ),
-            ],
-          ),
-          const SizedBox(height: 30),
-          for (final destination in zentorDestinations)
-            _SidebarItem(
-              destination: destination,
-              active: location.startsWith(destination.path),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ZentorColors.elevatedSurface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: ZentorColors.border),
+              ),
+              child: const Text(
+                'Visible protection only. Avorax scans local files, quarantines confirmed detections, and only uses driver protection when explicitly installed.',
+                style: TextStyle(
+                  color: ZentorColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
             ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: ZentorColors.elevatedSurface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: ZentorColors.border),
-            ),
-            child: const Text(
-              'Visible protection only. Avorax scans local files, quarantines confirmed detections, and only uses driver protection when explicitly installed.',
-              style: TextStyle(color: ZentorColors.textSecondary, height: 1.45),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -100,34 +120,50 @@ class _SidebarItem extends StatelessWidget {
     final color = active
         ? ZentorColors.primaryAccent
         : ZentorColors.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go(destination.path),
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: active
-                ? ZentorColors.primaryAccent.withValues(alpha: 0.1)
-                : Colors.transparent,
+    return Semantics(
+      container: true,
+      button: true,
+      selected: active,
+      label: active
+          ? destination.currentSemanticLabel
+          : destination.openSemanticLabel,
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: active
-                  ? ZentorColors.primaryAccent.withValues(alpha: 0.25)
-                  : Colors.transparent,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(destination.icon, color: color, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                destination.label,
-                style: TextStyle(color: color, fontWeight: FontWeight.w700),
+            onTap: () => context.go(destination.path),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: active
+                    ? ZentorColors.primaryAccent.withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: active
+                      ? ZentorColors.primaryAccent.withValues(alpha: 0.25)
+                      : Colors.transparent,
+                ),
               ),
-            ],
+              child: Row(
+                children: [
+                  Icon(destination.icon, color: color, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      destination.label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

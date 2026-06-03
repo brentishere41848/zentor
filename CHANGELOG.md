@@ -12,6 +12,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Hardened ransomware-guard configuration tests to use temporary harmless fixtures rather than nonexistent absolute Windows paths.
 - Added `packages/avorax_protocol` test dependency and update-manifest schema tests covering parsing, conservative defaults, and exact wire-key serialization.
 - Added CI coverage for Avorax protocol tests plus product-copy, no-malware-binaries, false-positive, protection, and performance gates.
+- Added Flutter navigation accessibility tests for desktop/sidebar and mobile bottom navigation semantics.
 
 ### Changed
 
@@ -21,6 +22,8 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Avorax Update Service CLI now defaults to production update verification; development-signed packages require `--allow-development-key` or `AVORAX_ALLOW_DEVELOPMENT_UPDATES=1`.
 - Avorax Update Service now attempts to restore the rollback snapshot and restart services if payload copying fails after services have been stopped.
 - Shared Avorax update manifest models can now serialize back to the verifier/app wire format with `toJson()`.
+- Desktop sidebar navigation now exposes an explicit primary-navigation landmark, current-page labels, and scrolls instead of overflowing on constrained heights.
+- Mobile bottom navigation now exposes current-page semantics and per-destination tooltips.
 
 ### Verified
 
@@ -30,6 +33,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Custom driver/update contract tests now cover rollback-on-apply-failure and pass with 11 tests.
 - `packages/avorax_protocol` analyze and tests pass.
 - Product-copy, no-malware-binaries, false-positive, protection, and performance gates pass locally in the non-driver configuration.
+- Navigation accessibility widget tests pass.
 
 ### Known limitations
 
