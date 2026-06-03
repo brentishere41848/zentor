@@ -613,7 +613,7 @@ foreach ($file in $files) {
   [void]$componentsXml.AppendLine("    <DirectoryRef Id=`"$directoryId`">")
   [void]$componentsXml.AppendLine("      <Component Id=`"$componentId`" Guid=`"*`">")
   [void]$componentsXml.AppendLine("        <File Id=`"$fileId`" Source=`"$(XmlEscape $file.FullName)`" KeyPath=`"yes`" />")
-  if ($relativePath -eq "avorax_core_service.exe") {
+  if ($relativePath -eq "zentor_local_core.exe") {
     [void]$componentsXml.AppendLine("        <ServiceInstall Id=`"AvoraxCoreServiceInstall`" Type=`"ownProcess`" Vital=`"yes`" Name=`"avorax_core_service`" DisplayName=`"Avorax Core Service`" Description=`"Provides local scanning, native engine loading, quarantine, scan jobs, and local protection state for Avorax Anti-Virus.`" Start=`"auto`" Account=`"LocalSystem`" ErrorControl=`"normal`" Arguments=`"--service`" />")
     [void]$componentsXml.AppendLine("        <ServiceControl Id=`"AvoraxCoreServiceControl`" Name=`"avorax_core_service`" Stop=`"both`" Remove=`"uninstall`" Wait=`"yes`" />")
   }

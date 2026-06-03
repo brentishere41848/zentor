@@ -123,6 +123,10 @@ foreach ($wxs in $wxsFiles) {
       Add-CheckError "Installer WiX source starts $serviceName during MSI install; services must be installed without immediate start so non-elevated MSI launches do not fail at StartServices."
     }
   }
+  $coreServiceOnLocalCorePattern = '<File[^>]+Source="[^"]*zentor_local_core\.exe"[^>]*>\s*<ServiceInstall[^>]+Name="avorax_core_service"'
+  if ($content -notmatch $coreServiceOnLocalCorePattern) {
+    Add-CheckError "Avorax Core Service must be registered from zentor_local_core.exe so the service path always targets the canonical installed local-core binary."
+  }
   if ($content -notmatch "Name=`"avorax_update_service`"") {
     Add-CheckError "Installer WiX source does not register Avorax Update Service."
   }
