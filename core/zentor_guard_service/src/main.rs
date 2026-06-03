@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::ffi::OsString;
+use std::fs;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -10,12 +10,12 @@ use std::time::Duration;
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use zentor_native_engine::{
-    EngineConfig, ZentorNativeEngine, ScanActionMode as AneScanActionMode, Verdict as AneVerdict,
-};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
+use zentor_native_engine::{
+    EngineConfig, ScanActionMode as AneScanActionMode, Verdict as AneVerdict, ZentorNativeEngine,
+};
 
 mod driver_health;
 mod driver_ipc;
@@ -150,21 +150,21 @@ fn run_windows_service_loop() -> anyhow::Result<()> {
         ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
         ServiceType,
     };
-    use windows_service::service_control_handler::{
-        self, ServiceControlHandlerResult,
-    };
+    use windows_service::service_control_handler::{self, ServiceControlHandlerResult};
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel();
-    let status_handle = service_control_handler::register(SERVICE_NAME, move |control_event| {
-        match control_event {
-            ServiceControl::Stop | ServiceControl::Shutdown => {
-                let _ = shutdown_tx.send(());
-                ServiceControlHandlerResult::NoError
-            }
-            ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
-            _ => ServiceControlHandlerResult::NotImplemented,
-        }
-    })?;
+    let status_handle =
+        service_control_handler::register(
+            SERVICE_NAME,
+            move |control_event| match control_event {
+                ServiceControl::Stop | ServiceControl::Shutdown => {
+                    let _ = shutdown_tx.send(());
+                    ServiceControlHandlerResult::NoError
+                }
+                ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
+                _ => ServiceControlHandlerResult::NotImplemented,
+            },
+        )?;
 
     status_handle.set_service_status(ServiceStatus {
         service_type: ServiceType::OWN_PROCESS,
@@ -608,10 +608,7 @@ fn guard_config_base() -> PathBuf {
 }
 
 fn parse_guard_mode(raw: &str) -> Option<preexecution_policy::DriverProtectionMode> {
-    let normalized = raw
-        .trim()
-        .replace(['-', '_', ' '], "")
-        .to_ascii_lowercase();
+    let normalized = raw.trim().replace(['-', '_', ' '], "").to_ascii_lowercase();
     match normalized.as_str() {
         "off" | "disabled" => Some(preexecution_policy::DriverProtectionMode::Disabled),
         "observeonly" | "monitoronly" => {
@@ -884,7 +881,9 @@ fn quarantine_base() -> PathBuf {
         if let Ok(program_data) =
             std::env::var("ProgramData").or_else(|_| std::env::var("PROGRAMDATA"))
         {
-            return PathBuf::from(program_data).join("Avorax").join("Quarantine");
+            return PathBuf::from(program_data)
+                .join("Avorax")
+                .join("Quarantine");
         }
     }
     #[cfg(target_os = "macos")]
@@ -931,8 +930,10 @@ fn native_threat_match(path: &Path) -> anyhow::Result<Option<LocalThreatMatch>> 
     if matches!(
         verdict.final_verdict.verdict,
         AneVerdict::TestThreat | AneVerdict::ConfirmedMalware
-    ) && matches!(verdict.final_verdict.confidence, zentor_native_engine::Confidence::Confirmed)
-    {
+    ) && matches!(
+        verdict.final_verdict.confidence,
+        zentor_native_engine::Confidence::Confirmed
+    ) {
         return Ok(Some(LocalThreatMatch {
             reason: verdict.final_verdict.user_visible_explanation,
             engine: "avorax-native-engine".to_string(),
@@ -1251,7 +1252,11 @@ mod tests {
         .unwrap();
         assert_eq!(result.action, "stoppedAndQuarantined");
         assert!(!file.exists());
-        assert!(result.quarantine_path.as_ref().unwrap().ends_with(".avoraxq"));
+        assert!(result
+            .quarantine_path
+            .as_ref()
+            .unwrap()
+            .ends_with(".avoraxq"));
         assert!(Path::new(result.quarantine_path.as_ref().unwrap()).exists());
         let record_path = result.quarantine_record_path.as_ref().unwrap();
         assert!(Path::new(record_path).exists());

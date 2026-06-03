@@ -9,9 +9,17 @@ ClassGuid={b86dff51-a31e-4bac-b3cf-e8cfe75c9fc2}
 Provider=%ManufacturerName%
 DriverVer=05/27/2026,0.1.11.0
 CatalogFile=ZentorAvFilter.cat
+PnpLockdown=1
 
 [DestinationDirs]
 DefaultDestDir = 12
+DriverCopyFiles = 12
+
+[SourceDisksNames]
+1 = %DiskName%,,,
+
+[SourceDisksFiles]
+ZentorAvFilter.sys = 1
 
 [DefaultInstall.NTamd64]
 CopyFiles = DriverCopyFiles
@@ -25,19 +33,20 @@ ZentorAvFilter.sys
 [ServiceInstall]
 DisplayName = %ServiceName%
 ServiceType = 2
-StartType = 3
+StartType = 2
 ErrorControl = 1
 ServiceBinary = %12%\ZentorAvFilter.sys
 LoadOrderGroup = "FSFilter Anti-Virus"
 AddReg = InstanceRegistry
 
 [InstanceRegistry]
-HKR,"Instances","DefaultInstance",0x00000000,%DefaultInstance%
-HKR,"Instances\%DefaultInstance%","Altitude",0x00000000,%Altitude%
-HKR,"Instances\%DefaultInstance%","Flags",0x00010001,0
+HKR,"Parameters\Instances","DefaultInstance",0x00000000,%DefaultInstance%
+HKR,"Parameters\Instances\%DefaultInstance%","Altitude",0x00000000,%Altitude%
+HKR,"Parameters\Instances\%DefaultInstance%","Flags",0x00010001,0
 
 [Strings]
 ManufacturerName = "Avorax"
 ServiceName = "Avorax AV Minifilter"
 DefaultInstance = "ZentorAvFilter Instance"
 Altitude = "328500"
+DiskName = "Avorax ZentorAvFilter installation media"

@@ -7,7 +7,9 @@ param(
   [switch]$SkipClamAV,
   [switch]$IncludeClamAVCompatibility,
   [switch]$AllowDevelopmentModel,
-  [switch]$RecoveryInstall
+  [switch]$RecoveryInstall,
+  [switch]$RequireDriverPackage,
+  [string]$DriverPackageDir
 )
 
 $ErrorActionPreference = "Stop"
@@ -127,9 +129,14 @@ function To-WixId([string]$Value) {
     $id = "I_$id"
   }
   if ($id.Length -gt 60) {
-    $hash = [System.BitConverter]::ToString(
-      [System.Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Value))
-    ).Replace("-", "").Substring(0, 10)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $hash = [System.BitConverter]::ToString(
+        $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Value))
+      ).Replace("-", "").Substring(0, 10)
+    } finally {
+      $sha.Dispose()
+    }
     $id = $id.Substring(0, 45) + "_" + $hash
   }
   return $id
@@ -199,6 +206,7 @@ $intelToolsSourceDir = Join-Path $root "tools\zentor_intel"
 $simulatorsSourceDir = Join-Path $root "tools\simulators"
 $updateToolsSourceDir = Join-Path $root "tools\update"
 $docsSourceDir = Join-Path $root "docs"
+$driverPackageDefaultDir = Join-Path $distRoot "windows-driver\ZentorAvFilter"
 $modelFile = Join-Path $modelSourceDir "zentor_static_malware_model.onnx"
 $modelMetadataFile = Join-Path $modelSourceDir "zentor_static_malware_model.metadata.json"
 
@@ -391,6 +399,26 @@ Copy-RequiredTree $driverToolsSourceDir $stageDriverToolsDir "Windows minifilter
 $stageProcessGuardToolsDir = Join-Path $stageDir "driver-tools\zentor_windows_process_guard"
 Copy-RequiredTree $processGuardToolsSourceDir $stageProcessGuardToolsDir "Windows process guard driver tools"
 
+$driverPackageSource = if ($DriverPackageDir) { $DriverPackageDir } else { $driverPackageDefaultDir }
+$stageDriverPackageDir = Join-Path $stageDir "driver\ZentorAvFilter"
+$releaseDriverPackageDir = Join-Path $releaseDir "driver\ZentorAvFilter"
+$driverPackageIncluded = $false
+if (Test-Path $driverPackageSource) {
+  $driverSys = Get-ChildItem -LiteralPath $driverPackageSource -Recurse -Filter "ZentorAvFilter.sys" -ErrorAction SilentlyContinue | Select-Object -First 1
+  $driverInf = Get-ChildItem -LiteralPath $driverPackageSource -Recurse -Filter "ZentorAvFilter.inf" -ErrorAction SilentlyContinue | Select-Object -First 1
+  $driverCat = Get-ChildItem -LiteralPath $driverPackageSource -Recurse -Filter "*.cat" -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($driverSys -and $driverInf -and $driverCat) {
+    Copy-RequiredTree $driverPackageSource $stageDriverPackageDir "signed Windows minifilter driver package"
+    Copy-RequiredTree $driverPackageSource $releaseDriverPackageDir "signed Windows minifilter driver package"
+    $driverPackageIncluded = $true
+  } elseif ($RequireDriverPackage) {
+    throw "Driver package at $driverPackageSource is incomplete. Required: ZentorAvFilter.sys, ZentorAvFilter.inf, and a signed .cat catalog."
+  }
+} elseif ($RequireDriverPackage) {
+  throw "Required signed driver package directory was not found: $driverPackageSource"
+}
+$driverInstallScript = Join-Path $stageDir "tools\windows\avorax-install-driver.ps1"
+
 $stageToolsDir = Join-Path $stageDir "tools"
 Copy-RequiredTree $windowsToolsSourceDir (Join-Path $stageToolsDir "windows") "Windows validation tools"
 Copy-RequiredTree $securityToolsSourceDir (Join-Path $stageToolsDir "security") "security release gates"
@@ -400,6 +428,75 @@ Copy-RequiredTree $zneToolsSourceDir (Join-Path $stageToolsDir "zne") "ZNE self-
 Copy-RequiredTree $intelToolsSourceDir (Join-Path $stageToolsDir "zentor_intel") "safe threat-intel tools"
 Copy-RequiredTree $simulatorsSourceDir (Join-Path $stageToolsDir "simulators") "safe simulator tools"
 Copy-RequiredTree $updateToolsSourceDir (Join-Path $stageToolsDir "update") "update package tools"
+New-Item -ItemType Directory -Force -Path (Split-Path $driverInstallScript) | Out-Null
+@'
+param(
+  [string]$DriverInf = "C:\Program Files\Avorax\driver\ZentorAvFilter\ZentorAvFilter.inf",
+  [string]$ReportPath = "C:\ProgramData\Avorax\reports\driver_install_report.json"
+)
+$ErrorActionPreference = "Stop"
+New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
+$errors = New-Object System.Collections.Generic.List[string]
+$rebootRequired = $false
+$testSigningEnabledDuringInstall = $false
+try {
+  if (-not (Test-Path -LiteralPath $DriverInf)) { throw "Driver INF not found: $DriverInf" }
+  $driverDir = Split-Path $DriverInf
+  $certPath = Join-Path $driverDir "ZentorAvFilter.cer"
+  if (Test-Path -LiteralPath $certPath) {
+    certutil.exe -addstore -f Root $certPath | Out-Host
+    if ($LASTEXITCODE -ne 0) { $errors.Add("certutil Root import failed: $LASTEXITCODE") }
+    certutil.exe -addstore -f TrustedPublisher $certPath | Out-Host
+    if ($LASTEXITCODE -ne 0) { $errors.Add("certutil TrustedPublisher import failed: $LASTEXITCODE") }
+  }
+  $testSigningText = (bcdedit.exe /enum) 2>$null | Out-String
+  $testSigningOn = $testSigningText -match "(?im)^\s*testsigning\s+Yes\s*$"
+  if (-not $testSigningOn) {
+    bcdedit.exe /set testsigning on | Out-Host
+    if ($LASTEXITCODE -eq 0) {
+      $testSigningEnabledDuringInstall = $true
+      $rebootRequired = $true
+    } else {
+      $errors.Add("bcdedit failed to enable TESTSIGNING: $LASTEXITCODE")
+    }
+  }
+  pnputil.exe /add-driver $DriverInf /install | Out-Host
+  if ($LASTEXITCODE -ne 0) { throw "pnputil failed to install ZentorAvFilter. Exit code: $LASTEXITCODE" }
+  sc.exe config ZentorAvFilter start= auto | Out-Host
+  if ($LASTEXITCODE -ne 0) { $errors.Add("sc config ZentorAvFilter start=auto failed: $LASTEXITCODE") }
+  $loaded = $false
+  if (-not $rebootRequired) {
+    fltmc.exe load ZentorAvFilter 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      $errors.Add("fltmc failed to load ZentorAvFilter. Exit code: $LASTEXITCODE")
+    }
+    $loaded = (fltmc.exe filters | Select-String -Pattern "ZentorAvFilter" -Quiet)
+  }
+  [ordered]@{
+    installed = $true
+    running = $loaded
+    reboot_required = $rebootRequired
+    testsigning_enabled_during_install = $testSigningEnabledDuringInstall
+    driver_inf = $DriverInf
+    timestamp_utc = (Get-Date).ToUniversalTime().ToString("o")
+    errors = @($errors)
+  } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ReportPath -Encoding UTF8
+} catch {
+  $errors.Add($_.Exception.Message)
+  [ordered]@{
+    installed = $false
+    running = $false
+    reboot_required = $rebootRequired
+    testsigning_enabled_during_install = $testSigningEnabledDuringInstall
+    driver_inf = $DriverInf
+    timestamp_utc = (Get-Date).ToUniversalTime().ToString("o")
+    errors = @($errors)
+  } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ReportPath -Encoding UTF8
+  throw
+}
+'@ | Set-Content -LiteralPath $driverInstallScript -Encoding UTF8
+New-Item -ItemType Directory -Force -Path (Join-Path $releaseDir "tools\windows") | Out-Null
+Copy-Item -LiteralPath $driverInstallScript -Destination (Join-Path $releaseDir "tools\windows\avorax-install-driver.ps1") -Force
 Assert-StagePath "tools\update\avorax-dev-sign-manifest.py" "development update manifest signer"
 
 $coreSource = $null
@@ -492,6 +589,7 @@ $manifest = [ordered]@{
     trust_assets = Test-Path (Join-Path $stageDir "assets\trust")
     known_bad_test_assets = Test-Path (Join-Path $stageDir "assets\threats")
     windows_driver_tools = Test-Path (Join-Path $stageDir "driver-tools")
+    windows_minifilter_driver_package = $driverPackageIncluded
     validation_tools = Test-Path (Join-Path $stageDir "tools\windows\zentor-protection-selftest.ps1")
     release_gates = Test-Path (Join-Path $stageDir "tools\windows\zentor-release-gate.ps1")
     safe_simulators = Test-Path (Join-Path $stageDir "tools\simulators")
@@ -503,7 +601,7 @@ $manifest = [ordered]@{
     guard_service = "installed and started by MSI"
     update_service = "installed by MSI as manual-demand updater"
   }
-  driver_status = "driver source and validation scripts are packaged; driver is not silently installed or enabled"
+  driver_status = if ($driverPackageIncluded) { "signed driver package is included and installer will install/load ZentorAvFilter" } else { "driver package not included; build with -RequireDriverPackage for release builds" }
 }
 $manifestPath = Join-Path $stageDir "install-manifest.json"
 ($manifest | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
@@ -553,6 +651,7 @@ foreach ($requiredPayload in @(
   @("driver-tools\zentor_windows_minifilter\scripts\run-driver-self-test.ps1", "minifilter driver self-test"),
   @("driver-tools\zentor_windows_process_guard\scripts\run-process-guard-self-test.ps1", "process guard self-test"),
   @("tools\windows\zentor-protection-selftest.ps1", "protection self-test"),
+  @("tools\windows\avorax-install-driver.ps1", "driver install custom action script"),
   @("tools\windows\zentor-release-gate.ps1", "Windows release gate"),
   @("tools\windows\avorax-installed-smoke-test.ps1", "installed smoke test"),
   @("tools\windows\avorax-installer-stage-test.ps1", "installer stage test"),
@@ -656,6 +755,8 @@ $installReport = [ordered]@{
   model_present = Test-Path (Join-Path $stageEngineDir "ml\avorax_native_model.amodel")
   trust_pack_present = Test-Path (Join-Path $stageEngineDir "trust\avorax_known_good.atrust")
   engine_self_test_result = "pending_post_install_validation"
+  driver_package_included = $driverPackageIncluded
+  driver_install_result = if ($driverPackageIncluded) { "pending_msi_custom_action" } else { "not_included" }
   errors = @()
 }
 ($installReport | ConvertTo-Json -Depth 6) | Set-Content -LiteralPath $installReportSource -Encoding UTF8
@@ -704,6 +805,17 @@ foreach ($dir in $updateDataSubdirs) {
   [void]$programDataRefsXml.AppendLine("      <ComponentRef Id=`"$componentId`" />")
 }
 
+
+$driverCustomActionXml = ""
+if ($driverPackageIncluded) {
+  $driverCustomActionXml = @'
+    <CustomAction Id="InstallAvoraxMinifilterDriver" Directory="INSTALLFOLDER" Execute="deferred" Impersonate="no" ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]tools\windows\avorax-install-driver.ps1&quot;" Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="InstallAvoraxMinifilterDriver" After="InstallFiles" Condition="NOT Installed" />
+    </InstallExecuteSequence>
+'@
+}
+
 $upgradeCode = "35E0D125-9699-4CFB-8E93-588D0E83F517"
 $majorUpgradeXml = '    <MajorUpgrade DowngradeErrorMessage="A newer version of Avorax is already installed." />'
 if ($RecoveryInstall) {
@@ -736,6 +848,7 @@ $programDataXml
 
 $directoryXml
 $componentsXml
+$driverCustomActionXml
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="StartMenuShortcut" Guid="*">
         <Shortcut Id="ZentorStartMenuShortcut" Name="Avorax Anti-Virus" Target="[INSTALLFOLDER]Avorax.exe" WorkingDirectory="INSTALLFOLDER" />

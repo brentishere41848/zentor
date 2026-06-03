@@ -16,10 +16,24 @@ function Find-MSBuild {
   $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
   if (Test-Path -LiteralPath $vswhere) {
     $install = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-    if ($install) {
-      $candidate = Join-Path $install "MSBuild\Current\Bin\MSBuild.exe"
-      if (Test-Path -LiteralPath $candidate) { return $candidate }
+    if (-not $install) {
+      $install = & $vswhere -latest -products * -property installationPath
     }
+    if ($install) {
+      foreach ($relative in @("MSBuild\Current\Bin\amd64\MSBuild.exe", "MSBuild\Current\Bin\MSBuild.exe")) {
+        $candidate = Join-Path $install $relative
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+      }
+    }
+  }
+  $roots = @("${env:ProgramFiles(x86)}\Microsoft Visual Studio", "${env:ProgramFiles}\Microsoft Visual Studio")
+  foreach ($root in $roots) {
+    if (-not (Test-Path -LiteralPath $root)) { continue }
+    $candidate = Get-ChildItem -LiteralPath $root -Recurse -Filter MSBuild.exe -ErrorAction SilentlyContinue |
+      Where-Object { $_.FullName -match "MSBuild\\Current\\Bin(\\amd64)?\\MSBuild.exe$" } |
+      Sort-Object FullName -Descending |
+      Select-Object -First 1
+    if ($candidate) { return $candidate.FullName }
   }
   return $null
 }
