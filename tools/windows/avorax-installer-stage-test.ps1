@@ -114,9 +114,13 @@ foreach ($wxs in $wxsFiles) {
     Add-CheckError "MSI WiX source does not include the installer license/proof page asset."
   }
   foreach ($serviceName in @("avorax_core_service", "avorax_guard_service")) {
-    $serviceControlPattern = "<ServiceControl[^>]+Name=`"$serviceName`"[^>]+Start=`"both`""
+    $serviceControlPattern = "<ServiceControl[^>]+Name=`"$serviceName`""
     if ($content -notmatch $serviceControlPattern) {
-      Add-CheckError "Installer WiX source does not start $serviceName during install and repair."
+      Add-CheckError "Installer WiX source does not manage $serviceName during uninstall/repair."
+    }
+    $startDuringInstallPattern = "<ServiceControl[^>]+Name=`"$serviceName`"[^>]+Start=`"both`""
+    if ($content -match $startDuringInstallPattern) {
+      Add-CheckError "Installer WiX source starts $serviceName during MSI install; services must be installed without immediate start so non-elevated MSI launches do not fail at StartServices."
     }
   }
   if ($content -notmatch "Name=`"avorax_update_service`"") {
