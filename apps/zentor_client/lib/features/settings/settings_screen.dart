@@ -327,20 +327,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _Section(
           title: 'Advanced',
           children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Developer options'),
-              subtitle: const Text(
-                'Cloud settings are normally managed by the Avorax build configuration.',
-                style: TextStyle(color: ZentorColors.textSecondary),
+            Material(
+              color: Colors.transparent,
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Developer options'),
+                subtitle: const Text(
+                  'Cloud settings are normally managed by the Avorax build configuration.',
+                  style: TextStyle(color: ZentorColors.textSecondary),
+                ),
+                value: _developerOptions,
+                onChanged: (value) async {
+                  setState(() => _developerOptions = value);
+                  if (!value && state.config.developerOverrideEnabled) {
+                    await _saveDeveloperOverride(controller, enabled: false);
+                  }
+                },
               ),
-              value: _developerOptions,
-              onChanged: (value) async {
-                setState(() => _developerOptions = value);
-                if (!value && state.config.developerOverrideEnabled) {
-                  await _saveDeveloperOverride(controller, enabled: false);
-                }
-              },
             ),
             if (_developerOptions || state.config.developerOverrideEnabled) ...[
               if (_developerOptions) ...[
@@ -500,7 +503,16 @@ class _Section extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            Semantics(
+              header: true,
+              label: 'Settings section, $title',
+              child: ExcludeSemantics(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             ...children,
           ],

@@ -671,3 +671,35 @@ Lead-engineer product-hardening pass across the Avorax repository. Goal is to mo
 - The Flutter shell now exposes route-aware screen-reader landmarks for the active page title and main content region.
 - Remaining open backlog items are broader per-feature accessibility/localization readiness and elevated/provisioned benchmark/driver validation paths.
 
+
+## 2026-06-04 hardening continuation 15
+
+### Completed changes
+
+- Added Settings screen section-heading semantics so screen readers can navigate General, Cloud, Protection, Native Engine, Diagnostics, and related settings groups as headings.
+- Added focused Settings accessibility widget coverage for section-heading labels.
+- Fixed the developer-options `SwitchListTile` Material warning by giving it its own transparent Material surface inside the colored settings panel, preserving visible/focus feedback.
+- Kept the broader accessibility/localization backlog open; this is a focused per-feature Settings improvement rather than a full app-wide audit.
+- Updated `TODO.md`, `CHANGELOG.md`, and `TESTING.md` with the Settings accessibility coverage.
+
+### Files modified
+
+- `TODO.md`
+- `CHANGELOG.md`
+- `TESTING.md`
+- `RUN_LOG.md`
+- `apps/zentor_client/lib/features/settings/settings_screen.dart`
+- `apps/zentor_client/test/settings_accessibility_test.dart`
+
+### Tests/checks run
+
+- `flutter test test/settings_accessibility_test.dart --plain-name "settings exposes screen-reader section headers"` failed before implementation because Settings section headings had no screen-reader section semantics.
+- `flutter test test/settings_accessibility_test.dart --plain-name "settings exposes screen-reader section headers"` passed after implementation.
+- `flutter test test/navigation_accessibility_test.dart test/settings_accessibility_test.dart` passed.
+- `flutter analyze` passed for `apps/zentor_client` with no issues.
+
+### Current status
+
+- Settings has route-independent screen-reader section headings and no longer emits the developer-options switch Material warning during widget tests.
+- Remaining open backlog items are broader per-feature accessibility/localization readiness and elevated/provisioned benchmark/driver validation paths.
+

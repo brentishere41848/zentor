@@ -62,6 +62,7 @@ This backlog is the working plan for the long-horizon Avorax hardening sprint. I
 - [x] Disabled-by-default cloud reputation provider interface with honest unavailable states when no backend is configured.
 - [x] Add explicit desktop/mobile navigation semantics and make the desktop sidebar scroll safely on constrained heights.
 - [x] Add shell-level screen-reader landmarks for current page title and main content on desktop and mobile layouts.
+- [x] Add settings section heading semantics and fix developer-options switch Material accessibility warnings.
 - [ ] Broader accessibility pass for keyboard traversal audits, contrast review, per-feature screen-reader coverage, and localization-ready text extraction.
 - [x] Export local event logs with structured category/severity metadata and without file contents; broader support bundles remain optional.
 - [x] Add safe benchmark harness for synthetic scan traversal/hashing, native signature test timing, guard decision timing, and non-elevated update-copy simulation.

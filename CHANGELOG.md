@@ -14,6 +14,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Added CI coverage for Avorax protocol tests plus product-copy, no-malware-binaries, false-positive, protection, and performance gates.
 - Added Flutter navigation accessibility tests for desktop/sidebar and mobile bottom navigation semantics.
 - Added Flutter shell accessibility coverage for current page title and main content landmarks.
+- Added Settings accessibility coverage for screen-reader section headings.
 - Added `tools/perf/avorax-benchmark.py`, a safe synthetic benchmark harness for traversal/hashing, native signature test timing, guard decision timing, and non-elevated update-copy simulation.
 - Added local-core allowlist regression tests covering replaced-payload path bypasses, hash-scope separation, explicit hash trust, and fail-closed file approval creation.
 - Added quarantine restore regression coverage that rejects tampered quarantined payloads before restoring.
@@ -34,6 +35,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Desktop sidebar navigation now exposes an explicit primary-navigation landmark, current-page labels, and scrolls instead of overflowing on constrained heights.
 - Mobile bottom navigation now exposes current-page semantics and per-destination tooltips.
 - App shell content now exposes screen-reader page-title and main-content semantics for the active route on desktop and mobile layouts.
+- Settings sections now expose screen-reader heading semantics, and the developer-options switch has its own Material surface so focus/ink feedback is not hidden by the settings panel.
 - The PowerShell performance gate now invokes the safe benchmark harness and writes `dist/performance/benchmark_report.json`.
 - File/app/executable allowlist entries now store the approved file SHA-256 at creation time and require both path and hash to match before suppressing detection/action.
 - Legacy/path-only file/app/executable allowlist entries now fail closed instead of trusting mutable paths.
@@ -54,6 +56,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - `packages/avorax_protocol` analyze and tests pass.
 - Product-copy, no-malware-binaries, false-positive, protection, and performance gates pass locally in the non-driver configuration.
 - Navigation accessibility widget tests pass, including shell page-title/main-content landmarks.
+- Settings accessibility widget tests pass, including section heading semantics.
 - Flutter client analysis passes: `flutter analyze`.
 - Updated performance gate passes and generates the safe benchmark report.
 - Local-core protection tests pass: `cargo test --manifest-path core/zentor_local_core/Cargo.toml -- --nocapture` with 82 tests.
