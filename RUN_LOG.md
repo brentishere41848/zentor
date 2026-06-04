@@ -818,3 +818,16 @@ Updates page showed:
 - `flutter test test/update_service_test.dart` passed with 7 tests.
 - `flutter analyze` passed for `apps/zentor_client`.
 
+
+## 2026-06-04 release push 0.2.32
+
+### Requested action
+
+- User asked to push `0.2.32` after the update-feed and driver-remediation fixes.
+
+### Release plan
+
+- Publish a real `v0.2.32` GitHub release with Windows MSI, setup EXE, `.aup`, and `update-feed.json` assets.
+- Build the Windows client with `AVORAX_APP_VERSION=0.2.32` and the default GitHub update feed URL.
+- Verify tag-specific and `latest` update-feed URLs after publishing.
+

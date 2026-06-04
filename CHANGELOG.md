@@ -2,7 +2,7 @@
 
 All notable Avorax changes should be documented here. Version entries avoid unsupported marketing claims and focus on implemented, testable behavior.
 
-## Unreleased - Guard pre-execution performance and CI hardening
+## 0.2.32 - Driver remediation, update feed fallback, and accessibility hardening
 
 ### Added
 
@@ -70,7 +70,7 @@ All notable Avorax changes should be documented here. Version entries avoid unsu
 - Guard-service tests pass: `cargo test --manifest-path core/zentor_guard_service/Cargo.toml -- --nocapture` with 26 tests.
 - Guard-service release build passes: `cargo build --manifest-path core/zentor_guard_service/Cargo.toml --release`.
 - Live Windows host check confirmed `ZentorAvFilter` installed but stopped, `fltmc load ZentorAvFilter` blocked by access/policy, and `bcdedit /set testsigning on` blocked in the non-elevated shell with `Access is denied`.
-- Live GitHub update feed check passes: `https://github.com/brentishere41848/Avorax/releases/latest/download/update-feed.json` returns the 0.2.31 feed JSON.
+- Live GitHub update feed check passes: `https://github.com/brentishere41848/Avorax/releases/latest/download/update-feed.json` returns the feed JSON.
 - Flutter update-service tests pass: `flutter test test/update_service_test.dart` with 7 tests.
 - Flutter client analysis passes after the update fallback change: `flutter analyze`.
 
