@@ -1870,6 +1870,58 @@ mod tests {
     }
 
     #[test]
+    fn strong_probable_malware_overrides_known_good_hash() {
+        let mut input = ApplicationControlInput::for_path("C:\\Tools\\trusted.exe");
+        input.sha256 = Some("sha256:abc123".to_string());
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let mut policy = ApplicationControlPolicy::new(ProtectionMode::Lockdown);
+        policy.known_good = KnownGoodStore::from_hashes(["abc123".to_string()]);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::Block);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(!result.label_as_malware);
+    }
+
+    #[test]
+    fn strong_probable_malware_overrides_exact_hash_user_approval() {
+        let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\cli.exe");
+        input.sha256 = Some("sha256:def456".to_string());
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let mut approvals = UserApprovalStore::default();
+        approvals.approve_hash("def456".to_string());
+        let mut policy = ApplicationControlPolicy::new(ProtectionMode::Lockdown);
+        policy.user_approvals = approvals;
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::Block);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(!result.label_as_malware);
+    }
+
+    #[test]
+    fn strong_probable_malware_overrides_trusted_publisher() {
+        let mut input = ApplicationControlInput::for_path("C:\\Program Files\\Vendor\\app.exe");
+        input.signature_valid = true;
+        input.publisher = Some("Contoso Trusted Apps".to_string());
+        input.probable_malware = true;
+        input.strong_risk_signal = true;
+        let mut policy = ApplicationControlPolicy::new(ProtectionMode::Lockdown);
+        policy.trusted_publishers =
+            TrustedPublisherPolicy::with_trusted(["contoso trusted apps".to_string()]);
+
+        let result = policy.evaluate(&input);
+
+        assert_eq!(result.decision, ApplicationControlDecision::Block);
+        assert_eq!(result.trust_level, ApplicationTrustLevel::Suspicious);
+        assert!(!result.label_as_malware);
+    }
+
+    #[test]
     fn lockdown_allows_exact_hash_after_user_approval() {
         let mut input = ApplicationControlInput::for_path("C:\\Users\\Brent\\Downloads\\cli.exe");
         input.sha256 = Some("sha256:def456".to_string());

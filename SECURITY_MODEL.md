@@ -102,6 +102,7 @@ Verdicts should include evidence, reason codes, confidence, and recommended acti
 - Clean/unknown/low-signal observations: no automatic action.
 - Suspicious/probable findings: user review unless stronger independent evidence and explicit policy allow action.
 - Confirmed signature/test-threat findings: may quarantine only when scan mode permits, path is not allowlisted/trusted, and quarantine succeeds safely.
+- Strong probable-malware findings with independent evidence must be evaluated before stale local trust records such as known-good hashes, exact user approvals, or trusted-publisher allow decisions; in Lockdown they block pending review, and in less strict modes they are allowed only with monitoring/review.
 - ML-only detections from development models must not auto-quarantine.
 
 Allowlist decisions must not reduce protection through path-only trust for mutable files:

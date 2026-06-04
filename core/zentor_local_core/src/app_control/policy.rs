@@ -138,6 +138,10 @@ impl ApplicationControlPolicy {
             );
         }
 
+        if input.probable_malware && input.strong_risk_signal {
+            return probable_malware_result(self.mode);
+        }
+
         if input
             .sha256
             .as_ref()
@@ -209,33 +213,6 @@ impl ApplicationControlPolicy {
             }
         }
 
-        if input.probable_malware && input.strong_risk_signal {
-            return match self.mode {
-                ProtectionMode::Lockdown => result(
-                    ApplicationControlDecision::Block,
-                    ApplicationTrustLevel::Suspicious,
-                    "Probable malware signal blocked by Lockdown Mode for user review; not quarantined until confirmed.",
-                    false,
-                    true,
-                    false,
-                    30_000,
-                ),
-                ProtectionMode::MonitorOnly
-                | ProtectionMode::DeveloperMode
-                | ProtectionMode::Balanced
-                | ProtectionMode::BlockConfirmedThreats => result(
-                    ApplicationControlDecision::AllowAndMonitor,
-                    ApplicationTrustLevel::Suspicious,
-                    "Probable malware signal requires review; automatic quarantine is limited to confirmed threats.",
-                    false,
-                    false,
-                    true,
-                    30_000,
-                ),
-                ProtectionMode::Off => unreachable!(),
-            };
-        }
-
         match self.mode {
             ProtectionMode::MonitorOnly | ProtectionMode::DeveloperMode => result(
                 ApplicationControlDecision::AllowAndMonitor,
@@ -266,6 +243,33 @@ impl ApplicationControlPolicy {
             ),
             ProtectionMode::Off => unreachable!(),
         }
+    }
+}
+
+fn probable_malware_result(mode: ProtectionMode) -> ApplicationControlResult {
+    match mode {
+        ProtectionMode::Lockdown => result(
+            ApplicationControlDecision::Block,
+            ApplicationTrustLevel::Suspicious,
+            "Strong probable-malware evidence overrides stale trust records in Lockdown Mode; user review is required before allowing execution.",
+            false,
+            true,
+            false,
+            30_000,
+        ),
+        ProtectionMode::MonitorOnly
+        | ProtectionMode::DeveloperMode
+        | ProtectionMode::Balanced
+        | ProtectionMode::BlockConfirmedThreats => result(
+            ApplicationControlDecision::AllowAndMonitor,
+            ApplicationTrustLevel::Suspicious,
+            "Strong probable-malware evidence overrides stale trust records and requires review; automatic quarantine is limited to confirmed threats.",
+            false,
+            false,
+            true,
+            30_000,
+        ),
+        ProtectionMode::Off => unreachable!(),
     }
 }
 

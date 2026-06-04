@@ -513,3 +513,33 @@ Lead-engineer product-hardening pass across the Avorax repository. Goal is to mo
 - Trusted backup/sync process policy is now less bypass-prone: compromise-like ransom-note or backup-tamper behavior remains visible even for trusted process paths.
 - Remaining work continues with further protection-quality review of scanner, guard, update, UI honesty, and elevated/provisioned driver validation paths.
 
+
+## 2026-06-04 hardening continuation 10
+
+### Completed changes
+
+- Hardened app-control trust precedence so strong probable-malware evidence is evaluated before known-good hashes, exact user hash approvals, and trusted-publisher allow decisions.
+- Preserved confirmed-malware priority above everything and preserved ordinary trusted known-good/user/publisher allow behavior when no strong probable-malware evidence is present.
+- Added regression tests for strong probable-malware overriding stale known-good, user-approved, and trusted-publisher trust records.
+- Updated `TODO.md`, `SECURITY_MODEL.md`, and `CHANGELOG.md` with the app-control precedence behavior.
+
+### Files modified
+
+- `TODO.md`
+- `SECURITY_MODEL.md`
+- `CHANGELOG.md`
+- `RUN_LOG.md`
+- `core/zentor_local_core/src/app_control/policy.rs`
+- `core/zentor_local_core/src/main.rs`
+
+### Tests/checks run
+
+- `cargo test --manifest-path core/zentor_local_core/Cargo.toml strong_probable_malware_overrides -- --nocapture` passed with 3 focused trust-precedence tests.
+- `cargo test --manifest-path core/zentor_local_core/Cargo.toml lockdown_allows -- --nocapture` passed with 3 trust-preservation tests.
+- `cargo test --manifest-path core/zentor_local_core/Cargo.toml -- --nocapture` passed with 80 local-core tests.
+
+### Current status
+
+- Stale trust records can no longer silently allow execution when current scan/risk evidence says a payload is probably malicious.
+- Remaining work continues with further protection-quality review of scanner, guard, update, UI honesty, and elevated/provisioned driver validation paths.
+
