@@ -140,6 +140,26 @@ void main() {
     );
   });
 
+  test('dev-channel verification and install pass explicit dev key flag', () {
+    final source = File(
+      'lib/core/updates/update_service.dart',
+    ).readAsStringSync();
+    final verifyMethod = source.substring(
+      source.indexOf('Future<void> verifyDownloadedPackage'),
+      source.indexOf('Future<void> installDownloadedPackage'),
+    );
+    final installMethod = source.substring(
+      source.indexOf('Future<void> installDownloadedPackage'),
+      source.indexOf('Future<void> rollbackPreviousVersion'),
+    );
+
+    expect(source, contains('List<String> _updaterArgsFor'));
+    expect(source, contains("update.channel == 'dev'"));
+    expect(source, contains("'--allow-development-key'"));
+    expect(verifyMethod, contains('_updaterArgsFor(update'));
+    expect(installMethod, contains('_updaterArgsFor(update'));
+  });
+
   test('Windows verification uses elevated updater path', () {
     final source = File(
       'lib/core/updates/update_service.dart',

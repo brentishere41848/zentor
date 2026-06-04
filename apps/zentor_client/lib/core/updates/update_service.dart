@@ -208,11 +208,11 @@ class ZentorUpdateService {
       throw StateError('No downloaded update package is available to verify.');
     }
     final updater = _requireUpdateServiceExecutable();
-    await _runUpdater(updater, [
-      '--verify',
-      packagePath,
-      update.currentVersion,
-    ], elevated: Platform.isWindows);
+    await _runUpdater(
+      updater,
+      _updaterArgsFor(update, ['--verify', packagePath, update.currentVersion]),
+      elevated: Platform.isWindows,
+    );
   }
 
   Future<void> installDownloadedPackage(UpdateInfo update) async {
@@ -222,7 +222,18 @@ class ZentorUpdateService {
     }
     final updater = _requireUpdateServiceExecutable();
     final args = ['--apply', packagePath, _installDir(), update.currentVersion];
-    await _runUpdater(updater, args, elevated: Platform.isWindows);
+    await _runUpdater(
+      updater,
+      _updaterArgsFor(update, args),
+      elevated: Platform.isWindows,
+    );
+  }
+
+  List<String> _updaterArgsFor(UpdateInfo update, List<String> args) {
+    if (update.channel == 'dev') {
+      return [...args, '--allow-development-key'];
+    }
+    return args;
   }
 
   Future<void> rollbackPreviousVersion() async {

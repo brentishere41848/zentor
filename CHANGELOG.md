@@ -2,6 +2,19 @@
 
 All notable Avorax changes should be documented here. Version entries avoid unsupported marketing claims and focus on implemented, testable behavior.
 
+## 0.2.33 - Dev-channel updater hotfix
+
+### Fixed
+
+- Dev-channel in-app updates now pass `--allow-development-key` to the elevated Avorax Update Service for both verify and apply, matching the dev feed/package signing policy.
+- This fixes the installed UI error `Avorax Update Service failed. Exit code: 1` when updating from 0.2.31 to a dev-channel `.aup` package.
+
+### Verified
+
+- Installed 0.2.31 updater reproduces the failure without the dev flag and verifies the 0.2.32 package when the flag is supplied.
+- `flutter test test/update_service_test.dart` passes with regression coverage for the explicit dev flag.
+- `flutter analyze` passes.
+
 ## 0.2.32 - Driver remediation, update feed fallback, and accessibility hardening
 
 ### Added

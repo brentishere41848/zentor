@@ -831,3 +831,23 @@ Updates page showed:
 - Build the Windows client with `AVORAX_APP_VERSION=0.2.32` and the default GitHub update feed URL.
 - Verify tag-specific and `latest` update-feed URLs after publishing.
 
+
+## 2026-06-04 updater hotfix 0.2.33
+
+### Symptom
+
+- User reported the Updates screen showing `Last error: Bad state: Avorax Update Service failed. Exit code: 1` while updating from 0.2.31 to 0.2.32.
+
+### Evidence
+
+- Installed updater status log showed `manifest signature verification failed` for `--verify`.
+- Direct installed-updater verification of the 0.2.32 package succeeds when `--allow-development-key` is supplied.
+- Flutter client was invoking `--verify` and `--apply` without `--allow-development-key` even though the build/feed channel is `dev`.
+- `setx AVORAX_ALLOW_DEVELOPMENT_UPDATES true` succeeded as a live user-level workaround; the UI must be restarted to inherit it.
+
+### Fix
+
+- Added `_updaterArgsFor` so dev-channel updates append `--allow-development-key` for verify/apply.
+- Added Flutter regression coverage for the dev-channel updater argument.
+- Plan: publish 0.2.33 with the corrected client and latest update feed.
+
